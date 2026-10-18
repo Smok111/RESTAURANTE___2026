@@ -1,0 +1,16 @@
+{
+  "name": "Sabor Chugurano",
+  "short_name": "Sabor Chugurano",
+  "description": "Restaurante Sabor Chugurano - Menú y Platos a la Carta",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#cc9933",
+  "icons": [
+    {
+      "src": "/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
