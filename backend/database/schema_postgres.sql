@@ -212,10 +212,10 @@ SELECT setval(pg_get_serial_sequence('users', 'id'),       COALESCE((SELECT MAX(
 SELECT setval(pg_get_serial_sequence('categories', 'id'),  COALESCE((SELECT MAX(id) FROM categories), 1));
 SELECT setval(pg_get_serial_sequence('menu_items', 'id'),  COALESCE((SELECT MAX(id) FROM menu_items), 1));
 SELECT setval(pg_get_serial_sequence('clientes', 'id'),    COALESCE((SELECT MAX(id) FROM clientes), 1));
-SELECT setval(pg_get_serial_sequence('orders', 'id'),      1, false);
-SELECT setval(pg_get_serial_sequence('order_items', 'id'), 1, false);
-SELECT setval(pg_get_serial_sequence('payments', 'id'),    1, false);
-SELECT setval(pg_get_serial_sequence('reservations', 'id'),1, false);
-SELECT setval(pg_get_serial_sequence('daily_menus', 'id'), 1, false);
-SELECT setval(pg_get_serial_sequence('ventas', 'id'),      1, false);
-SELECT setval(pg_get_serial_sequence('venta_items', 'id'), 1, false);
+SELECT setval(pg_get_serial_sequence('orders', 'id'),      COALESCE((SELECT MAX(id) FROM orders), 1));
+SELECT setval(pg_get_serial_sequence('order_items', 'id'), COALESCE((SELECT MAX(id) FROM order_items), 1));
+SELECT setval(pg_get_serial_sequence('payments', 'id'),    COALESCE((SELECT MAX(id) FROM payments), 1));
+SELECT setval(pg_get_serial_sequence('reservations', 'id'),COALESCE((SELECT MAX(id) FROM reservations), 1));
+SELECT setval(pg_get_serial_sequence('daily_menus', 'id'), COALESCE((SELECT MAX(id) FROM daily_menus), 1));
+SELECT setval(pg_get_serial_sequence('ventas', 'id'),      COALESCE((SELECT MAX(id) FROM ventas), 1));
+SELECT setval(pg_get_serial_sequence('venta_items', 'id'), COALESCE((SELECT MAX(id) FROM venta_items), 1));
