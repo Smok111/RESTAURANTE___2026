@@ -1,0 +1,11 @@
+.env
+*.exe
+*.exe~
+*.db
+*.sqlite
+*.log
+uploads/*
+!uploads/.gitkeep
+server.exe
+server.exe~
+casita_nortena.db
