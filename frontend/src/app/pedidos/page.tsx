@@ -332,7 +332,7 @@ function PedidosContent() {
       </AnimatePresence>
       {/* Header Sticky */}
       <div className="border-b border-white/5 bg-zinc-900/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 min-h-16 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 hover:text-amber-400 transition-colors text-sm font-semibold text-zinc-400">
               <ArrowLeft className="w-5 h-5" />
@@ -349,10 +349,10 @@ function PedidosContent() {
 
 
           {/* Selector de Modos: Plano vs Carta */}
-          <div className="flex items-center bg-zinc-950 p-1.5 rounded-2xl border border-white/10">
+          <div className="order-last w-full sm:order-none sm:w-auto flex items-center bg-zinc-950 p-1.5 rounded-2xl border border-white/10">
             <button
               onClick={() => setViewMode("plano")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 viewMode === "plano"
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
                   : "text-zinc-400 hover:text-white"
@@ -363,14 +363,14 @@ function PedidosContent() {
             </button>
             <button
               onClick={() => setViewMode("carta")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 viewMode === "carta"
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
                   : "text-zinc-400 hover:text-white"
               }`}
             >
               <ShoppingCart className="w-4 h-4" />
-              <span>Tomar Pedido (Mesa {tableNumber})</span>
+              <span className="whitespace-nowrap">Tomar Pedido (Mesa {tableNumber})</span>
             </button>
           </div>
 
@@ -379,7 +379,7 @@ function PedidosContent() {
               <div className="flex items-center gap-2 px-3.5 py-2 bg-zinc-800/80 rounded-xl border border-white/5 text-xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-zinc-400 hidden md:inline">Mesero:</span>
-                <span className="font-bold text-white">{user.name}</span>
+                <span className="font-bold text-white max-w-[90px] sm:max-w-none truncate">{user.name}</span>
               </div>
             )}
 
@@ -407,7 +407,7 @@ function PedidosContent() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 pt-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
 
         {/* COMUNICACIÓN COCINERO -> MESERO: Alerta de Platos Listos */}
         {readyOrders.length > 0 && (
@@ -627,7 +627,7 @@ function PedidosContent() {
             </div>
 
             {/* CONTENEDOR PRINCIPAL: CARTA + COMANDA */}
-            <div className="grid lg:grid-cols-3 gap-10">
+            <div className="grid lg:grid-cols-3 gap-6 lg:gap-10">
               {/* Sección Menú */}
               <div className="lg:col-span-2">
                 {/* Categorías */}

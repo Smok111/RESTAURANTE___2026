@@ -167,20 +167,20 @@ export default function Cocina() {
 
       {/* Navbar */}
       <div className="bg-zinc-900/80 border-b border-white/5 sticky top-0 z-40 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 min-h-16 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Logo size={40} showText={false} />
             </Link>
             <div className="h-6 w-px bg-white/10 hidden sm:block" />
             <div>
-              <h1 className="font-bold text-xl tracking-wide flex items-center gap-2">
+              <h1 className="font-bold text-lg sm:text-xl tracking-wide flex items-center gap-2 flex-wrap">
                 Panel de Cocina
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <span className="hidden sm:inline-block text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                   En vivo
                 </span>
               </h1>
-              <p className="text-xs text-amber-400 font-medium">Sabor Chugurano • Comandas en tiempo real</p>
+              <p className="text-xs text-amber-400 font-medium hidden sm:block">Sabor Chugurano • Comandas en tiempo real</p>
             </div>
           </div>
 
@@ -193,7 +193,7 @@ export default function Cocina() {
                 setSoundEnabled(next);
                 if (next) playBellSound();
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                 soundEnabled
                   ? "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30"
                   : "bg-zinc-800 text-zinc-400 border-white/5 hover:text-white"
@@ -201,14 +201,14 @@ export default function Cocina() {
               title="Activar/Silenciar campanita de cocina"
             >
               {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              {soundEnabled ? "Campanita Activa" : "Silenciado"}
+              <span className="hidden sm:inline">{soundEnabled ? "Campanita Activa" : "Silenciado"}</span>
             </button>
 
             {user && (
               <div className="flex items-center gap-2 px-3.5 py-2 bg-zinc-800/80 rounded-xl border border-white/5 text-xs">
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                 <span className="text-zinc-400 hidden md:inline">Cocinero:</span>
-                <span className="font-bold text-white">{user.name}</span>
+                <span className="font-bold text-white max-w-[90px] sm:max-w-none truncate">{user.name}</span>
               </div>
             )}
 
@@ -233,7 +233,7 @@ export default function Cocina() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {loading && orders.length === 0 ? (
           <div className="flex justify-center py-20">
             <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />

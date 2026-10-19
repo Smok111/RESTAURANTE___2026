@@ -250,20 +250,20 @@ export default function CajaPage() {
     <div className="min-h-screen bg-zinc-950 text-foreground pb-20">
       {/* Top Navbar */}
       <div className="bg-zinc-900/80 border-b border-white/5 sticky top-0 z-40 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 min-h-16 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Logo size={40} showText={false} />
             </Link>
             <div className="h-6 w-px bg-white/10 hidden sm:block" />
             <div>
-              <h1 className="font-bold text-xl tracking-wide flex items-center gap-2">
-                Caja & Facturación
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <h1 className="font-bold text-lg sm:text-xl tracking-wide flex items-center gap-2 flex-wrap">
+                Caja &amp; Facturación
+                <span className="hidden sm:inline-block text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                   Punto de Venta
                 </span>
               </h1>
-              <p className="text-xs text-amber-400 font-medium">Sabor Chugurano • Cobro de mesas y emisión de tickets</p>
+              <p className="text-xs text-amber-400 font-medium hidden sm:block">Sabor Chugurano • Cobro de mesas y emisión de tickets</p>
             </div>
           </div>
 
@@ -273,7 +273,7 @@ export default function CajaPage() {
               <div className="flex items-center gap-2 px-3.5 py-2 bg-zinc-800/80 rounded-xl border border-white/5 text-xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-zinc-400 hidden md:inline">Caja:</span>
-                <span className="font-bold text-white">{user.name}</span>
+                <span className="font-bold text-white max-w-[90px] sm:max-w-none truncate">{user.name}</span>
               </div>
             )}
 
@@ -309,7 +309,7 @@ export default function CajaPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 pt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
         {/* Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-5 relative overflow-hidden">

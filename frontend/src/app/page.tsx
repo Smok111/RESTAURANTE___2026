@@ -217,7 +217,7 @@ export default function Home() {
       
       {/* NAVBAR PÚBLICA PARA CLIENTES */}
       <nav className="fixed w-full z-50 top-0 border-b border-white/5 bg-background/70 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
           <Link href="/" className="group flex items-center">
             <Logo size={46} />
           </Link>
@@ -241,7 +241,7 @@ export default function Home() {
               title="Iniciar sesión en el sistema"
             >
               <User className="w-3.5 h-3.5 text-zinc-400 group-hover:text-primary transition-colors" />
-              <span>Acceso Personal</span>
+              <span className="hidden sm:inline">Acceso Personal</span>
             </Link>
 
             <a 
