@@ -476,7 +476,7 @@ func updateOrderStatus(c *fiber.Ctx) error {
 }
 
 func getUsers(c *fiber.Ctx) error {
-	rows, err := database.DB.Query("SELECT id, role_id, name, email FROM users")
+	rows, err := database.DB.Query("SELECT id, role_id, name, email FROM users WHERE role_id <> $1", middleware.RolCliente)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -1468,7 +1468,7 @@ type VentaItemRequest struct {
 }
 
 type VentaRequest struct {
-	Tipo             string             `json:"tipo" validate:"required,oneof=Factura Boleta"`
+	Tipo             string             `json:"tipo" validate:"required,oneof=Factura Boleta factura boleta"`
 	Serie            string             `json:"serie" validate:"required,max=10"`
 	Numero           string             `json:"numero" validate:"required,max=20"`
 	ClienteID        int                `json:"cliente_id"`
@@ -1561,6 +1561,12 @@ func createVenta(c *fiber.Ctx) error {
 	}
 	if req.Estado == "" {
 		req.Estado = "Emitida"
+	}
+	switch strings.ToLower(req.Tipo) {
+	case "boleta":
+		req.Tipo = "Boleta"
+	case "factura":
+		req.Tipo = "Factura"
 	}
 
 	tx, err := database.DB.Begin()

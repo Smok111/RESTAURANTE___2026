@@ -51,7 +51,12 @@ export type Venta = {
 async function errorMessage(res: Response): Promise<string> {
   try {
     const data = await res.json();
-    return data.error || `HTTP ${res.status}`;
+    const detalle = data.details
+      ? Object.entries(data.details as Record<string, string>)
+          .map(([campo, msg]) => `${campo}: ${msg}`)
+          .join(", ")
+      : "";
+    return `${data.error || `HTTP ${res.status}`}${detalle ? ` (${detalle})` : ""}`;
   } catch {
     return `HTTP ${res.status}`;
   }
@@ -94,7 +99,10 @@ export async function registrarVenta(venta: Venta): Promise<Venta> {
   const res = await apiFetch(`/ventas`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(venta),
+    body: JSON.stringify({
+      ...venta,
+      tipo: venta.tipo === "boleta" ? "Boleta" : "Factura",
+    }),
   });
   if (!res.ok) throw new Error(await errorMessage(res));
   const data = await res.json();

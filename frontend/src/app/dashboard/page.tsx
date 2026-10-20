@@ -1228,7 +1228,7 @@ export default function Dashboard() {
                           <td className="py-4 px-4 text-zinc-400">{member.email}</td>
                           <td className="py-4 px-4">
                             <span className="px-3 py-1 bg-zinc-800 rounded-lg text-xs font-bold border border-white/5">
-                              {member.role_id === 1 ? 'Admin' : member.role_id === 2 ? 'Mesero' : member.role_id === 3 ? 'Cajero' : 'Cocinero / Chef'}
+                              {member.role_id === 1 ? 'Admin' : member.role_id === 2 ? 'Mesero' : member.role_id === 3 ? 'Cajero' : member.role_id === 4 ? 'Cocinero / Chef' : 'Cliente'}
                             </span>
                           </td>
                           <td className="py-4 px-4 text-right">
