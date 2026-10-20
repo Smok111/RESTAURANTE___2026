@@ -1,6 +1,6 @@
 "use client";
 
-import { apiFetch } from "@/lib/api";
+import { apiFetch, clearSession } from "@/lib/api";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -19,7 +19,8 @@ import {
   Flame,
   Soup,
   Check,
-  Lock
+  Lock,
+  LogOut
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -101,15 +102,32 @@ export default function Home() {
     time: string;
     guests: number;
   } | null>(null);
-  const [loggedUser, setLoggedUser] = useState<{ name?: string } | null>(null);
+  const [loggedUser, setLoggedUser] = useState<{
+    id?: number;
+    name?: string;
+    email?: string;
+    phone?: string;
+    role_id?: number;
+  } | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("user");
-      if (stored) setLoggedUser(JSON.parse(stored));
-    } catch {
-      setLoggedUser(null);
-    }
+    const timer = setTimeout(() => {
+      try {
+        const stored = localStorage.getItem("user");
+        if (!stored) return;
+        const parsed = JSON.parse(stored);
+        setLoggedUser(parsed);
+        setResForm((prev) => ({
+          ...prev,
+          name: prev.name || parsed.name || "",
+          email: prev.email || parsed.email || "",
+          phone: prev.phone || parsed.phone || ""
+        }));
+      } catch {
+        setLoggedUser(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -192,17 +210,22 @@ export default function Home() {
           time: resForm.time,
           guests: Number(resForm.guests)
         });
-        setResForm({
-          name: "",
-          phone: "",
-          email: "",
+        setResForm((prev) => ({
+          ...prev,
           date: new Date().toISOString().split("T")[0],
           time: "13:00",
           guests: 2,
           notes: ""
-        });
+        }));
       } else {
-        alert("Error al registrar la reserva. Por favor verifica tus datos.");
+        if (res.status === 401) {
+          clearSession();
+          setLoggedUser(null);
+          window.location.href = "/login?next=%2F%23reservas";
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Error al registrar la reserva. Por favor verifica tus datos.");
       }
     } catch (err) {
       console.error(err);
@@ -227,6 +250,18 @@ export default function Home() {
     { label: "9:00 PM", value: "21:00" }
   ];
 
+  const handleLogout = () => {
+    clearSession();
+    setLoggedUser(null);
+    setConfirmedReservation(null);
+  };
+
+  const panelHref =
+    loggedUser?.role_id === 1 ? "/dashboard" :
+    loggedUser?.role_id === 2 ? "/pedidos" :
+    loggedUser?.role_id === 3 ? "/caja" :
+    loggedUser?.role_id === 4 ? "/cocina" : "";
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden selection:bg-primary/30">
       
@@ -249,18 +284,46 @@ export default function Home() {
           </div>
 
           {/* Acciones */}
-          <div className="flex items-center gap-3">
-            <Link 
-              href="/login" 
-              className="px-4 py-2 rounded-full border border-white/10 hover:border-primary/40 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5 group"
-              title="Iniciar sesión en el sistema"
-            >
-              <User className="w-3.5 h-3.5 text-zinc-400 group-hover:text-primary transition-colors" />
-              <span className="hidden sm:inline">Acceso Personal</span>
-            </Link>
+          <div className="flex items-center gap-2 sm:gap-3">
+            {loggedUser ? (
+              <>
+                <Link
+                  href="/mis-reservas"
+                  className="px-4 py-2 rounded-full border border-white/10 hover:border-primary/40 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5"
+                  title="Ver mis reservas"
+                >
+                  <CalendarCheck2 className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Mis Reservas</span>
+                </Link>
+                {panelHref && (
+                  <Link
+                    href={panelHref}
+                    className="hidden sm:inline-flex px-4 py-2 rounded-full border border-white/10 hover:border-primary/40 text-xs font-semibold text-zinc-300 hover:text-white transition-all"
+                  >
+                    Panel
+                  </Link>
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="p-2.5 rounded-full border border-white/10 text-zinc-400 hover:text-red-400 hover:border-red-500/40 transition-colors cursor-pointer"
+                  title={`Cerrar sesión${loggedUser.name ? ` de ${loggedUser.name}` : ""}`}
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-full border border-white/10 hover:border-primary/40 text-xs font-semibold text-zinc-300 hover:text-white transition-all flex items-center gap-1.5 group"
+                title="Iniciar sesión o crear cuenta"
+              >
+                <User className="w-3.5 h-3.5 text-zinc-400 group-hover:text-primary transition-colors" />
+                <span className="hidden sm:inline">Ingresar</span>
+              </Link>
+            )}
 
-            <a 
-              href="#reservas" 
+            <a
+              href="#reservas"
               className="px-5 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-primary text-black font-black hover:brightness-110 transition-all text-xs shadow-[0_0_20px_rgba(204,153,51,0.35)] hover:scale-105"
             >
               Reservar Mesa
@@ -729,19 +792,19 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="flex justify-center gap-4">
+                  <div className="flex flex-wrap justify-center gap-4">
+                    <Link
+                      href="/mis-reservas"
+                      className="px-8 py-3 bg-primary text-primary-foreground font-black rounded-xl text-xs hover:bg-primary/90 transition-all shadow-md shadow-primary/20 inline-flex items-center gap-2"
+                    >
+                      <CalendarCheck2 className="w-4 h-4" /> Ver Mis Reservas
+                    </Link>
                     <button
                       onClick={() => setConfirmedReservation(null)}
-                      className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-xs transition-colors"
+                      className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
                     >
                       Realizar Otra Reserva
                     </button>
-                    <a
-                      href="#menu"
-                      className="px-8 py-3 bg-primary text-primary-foreground font-black rounded-xl text-xs hover:bg-primary/90 transition-all shadow-md shadow-primary/20"
-                    >
-                      Explorar Nuestra Carta
-                    </a>
                   </div>
                 </motion.div>
               ) : (
@@ -758,19 +821,38 @@ export default function Home() {
                       <div className="w-20 h-20 bg-primary/15 text-primary rounded-3xl flex items-center justify-center mx-auto mb-6 border border-primary/30">
                         <Lock className="w-9 h-9" />
                       </div>
-                      <h3 className="text-2xl font-black text-white mb-3">Inicia sesión para reservar</h3>
+                      <h3 className="text-2xl font-black text-white mb-3">Ingresa o crea tu cuenta para reservar</h3>
                       <p className="text-zinc-400 text-sm max-w-md mx-auto mb-8">
-                        Por seguridad, las reservas solo pueden registrarse con una cuenta autorizada del restaurante.
+                        Regístrate gratis para reservar tu mesa, revisar tus reservas y cancelarlas cuando lo necesites.
                       </p>
-                      <Link
-                        href="/login?next=/#reservas"
-                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-primary-foreground font-black rounded-2xl text-sm hover:bg-primary/90 transition-all shadow-[0_0_25px_rgba(204,153,51,0.3)]"
-                      >
-                        Iniciar Sesión <ArrowRight className="w-4 h-4" />
-                      </Link>
+                      <div className="flex flex-col sm:flex-row justify-center gap-3">
+                        <Link
+                          href="/registro?next=%2F%23reservas"
+                          className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-primary-foreground font-black rounded-2xl text-sm hover:bg-primary/90 transition-all shadow-[0_0_25px_rgba(204,153,51,0.3)]"
+                        >
+                          Crear Cuenta <ArrowRight className="w-4 h-4" />
+                        </Link>
+                        <Link
+                          href="/login?next=%2F%23reservas"
+                          className="inline-flex items-center justify-center gap-2 px-8 py-3.5 border border-white/15 text-white font-bold rounded-2xl text-sm hover:bg-white/5 transition-all"
+                        >
+                          Iniciar Sesión
+                        </Link>
+                      </div>
                     </div>
                   ) : (
                   <form onSubmit={handleReservationSubmit} className="space-y-6">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-2 border-b border-white/10">
+                      <p className="text-sm text-zinc-400">
+                        Reservando como <strong className="text-white">{loggedUser.name || "cliente"}</strong>
+                      </p>
+                      <Link
+                        href="/mis-reservas"
+                        className="text-xs font-semibold text-amber-400 hover:text-amber-300 inline-flex items-center gap-1.5"
+                      >
+                        <CalendarCheck2 className="w-3.5 h-3.5" /> Ver mis reservas
+                      </Link>
+                    </div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-xs font-semibold mb-2 text-zinc-300 flex items-center gap-1.5">
@@ -902,12 +984,20 @@ export default function Home() {
             <a href="#menu-del-dia" className="hover:text-amber-400 transition-colors">Menú S/ 10</a>
             <a href="#menu" className="hover:text-white transition-colors">Platos a la Carta</a>
             <a href="#reservas" className="hover:text-white transition-colors">Reservas</a>
-            <Link 
-              href="/login" 
+            <Link
+              href="/mis-reservas"
               className="text-zinc-400 hover:text-amber-400 transition-colors flex items-center gap-1 font-semibold"
             >
-              <User className="w-3.5 h-3.5" /> Acceso Personal
+              <CalendarCheck2 className="w-3.5 h-3.5" /> Mis Reservas
             </Link>
+            {!loggedUser && (
+              <Link
+                href="/login"
+                className="text-zinc-400 hover:text-amber-400 transition-colors flex items-center gap-1 font-semibold"
+              >
+                <User className="w-3.5 h-3.5" /> Acceso Personal
+              </Link>
+            )}
           </div>
         </div>
       </footer>

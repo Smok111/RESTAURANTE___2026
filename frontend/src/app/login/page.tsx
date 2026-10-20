@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowLeft, UtensilsCrossed, Lock, Mail } from "lucide-react";
+import { ArrowLeft, Lock, Mail, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -39,7 +39,7 @@ export default function Login() {
         }
         // Redirigir según el rol (o a la página solicitada)
         const next = new URLSearchParams(window.location.search).get("next");
-        if (next && next.startsWith("/")) {
+        if (next && next.startsWith("/") && !next.startsWith("//")) {
           router.push(next);
         } else if (data.user.role_id === 1) {
           router.push("/dashboard");
@@ -49,6 +49,8 @@ export default function Login() {
           router.push("/caja");
         } else if (data.user.role_id === 4) {
           router.push("/cocina");
+        } else if (data.user.role_id === 5) {
+          router.push("/mis-reservas");
         } else {
           router.push("/");
         }
@@ -95,7 +97,7 @@ export default function Login() {
             </h1>
             
             <p className="text-xl text-zinc-300 max-w-md leading-relaxed">
-              Ingresa al sistema de gestión de <strong className="text-white">Sabor Chugurano</strong>. Control de comandas, menú del día, platos a la carta y facturación en caja.
+              Ingresa a <strong className="text-white">Sabor Chugurano</strong>. Como cliente puedes reservar tu mesa, revisar tus reservas y cancelarlas. El personal accede a su panel de gestión.
             </p>
           </motion.div>
 
@@ -149,7 +151,7 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-zinc-900/50 backdrop-blur-sm border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-primary/50 focus:bg-zinc-900 transition-all hover:border-white/20" 
-                  placeholder="admin@saborchugurano.pe"
+                  placeholder="tu-correo@ejemplo.com"
                 />
               </div>
             </div>
@@ -182,12 +184,27 @@ export default function Login() {
                 <div className="w-6 h-6 rounded-full border-2 border-zinc-900/20 border-t-zinc-900 animate-spin" />
               ) : (
                 <>
-                  <span>Ingresar al Panel</span>
+                  <span>Ingresar</span>
                   <ArrowRightIcon className="w-5 h-5" />
                 </>
               )}
             </button>
           </form>
+
+          <div className="mt-8 pt-6 border-t border-white/10 flex flex-col gap-3 text-center text-sm text-zinc-400">
+            <p>
+              ¿Eres cliente y aún no tienes cuenta?{" "}
+              <Link href="/registro" className="text-primary font-semibold hover:underline">
+                Regístrate gratis
+              </Link>
+            </p>
+            <Link
+              href="/mis-reservas"
+              className="inline-flex items-center justify-center gap-1.5 text-zinc-300 hover:text-primary transition-colors font-semibold"
+            >
+              <CalendarDays className="w-4 h-4" /> Ver mis reservas
+            </Link>
+          </div>
 
         </motion.div>
       </div>

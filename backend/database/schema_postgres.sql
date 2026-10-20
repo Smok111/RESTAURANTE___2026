@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
     role_id INTEGER REFERENCES roles(id) ON DELETE SET NULL,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
+    phone VARCHAR(30),
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -72,6 +73,7 @@ CREATE TABLE IF NOT EXISTS payments (
 
 CREATE TABLE IF NOT EXISTS reservations (
     id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     name VARCHAR(100) NOT NULL,
     phone VARCHAR(30) NOT NULL,
     email VARCHAR(150),
@@ -82,6 +84,12 @@ CREATE TABLE IF NOT EXISTS reservations (
     status VARCHAR(50) DEFAULT 'Confirmada',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Migraciones idempotentes para bases de datos ya existentes.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(30);
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_reservations_user_id ON reservations(user_id);
+CREATE INDEX IF NOT EXISTS idx_reservations_email ON reservations(email);
 
 -- Menú Diario Configurable (pizarra del día)
 -- entradas y platos se guardan como JSON para conservar el formato que consume el frontend

@@ -110,6 +110,7 @@ func main() {
 
 	// ---------- Rutas públicas ----------
 	api.Post("/login", loginLimiter, loginUser)
+	api.Post("/register", loginLimiter, registerUser)
 	api.Get("/menu", getMenu)
 	api.Get("/categories", getCategories)
 	api.Get("/daily-menus", getDailyMenus)
@@ -169,9 +170,11 @@ func main() {
 	priv.Post("/users", admin, createUser)
 	priv.Delete("/users/:id", admin, deleteUser)
 
-	// Reservas (gestión) — Administrador / Mesero
+	// Reservas: los clientes pueden crear, ver y cancelar las suyas.
 	priv.Get("/reservations", adminOMesero, getReservations)
-	priv.Post("/reservations", personal, createReservation)
+	priv.Get("/reservations/mine", getMyReservations)
+	priv.Post("/reservations", createReservation)
+	priv.Patch("/reservations/:id/cancel", cancelMyReservation)
 	priv.Patch("/reservations/:id/status", adminOMesero, updateReservationStatus)
 	priv.Delete("/reservations/:id", admin, deleteReservation)
 
@@ -309,14 +312,14 @@ func loginUser(c *fiber.Ctx) error {
 
 	var id int
 	var roleId int
-	var name, passHash, roleName string
+	var name, email, phone, passHash, roleName string
 
 	err := database.DB.QueryRow(`
-		SELECT u.id, u.role_id, u.name, u.password_hash, COALESCE(r.name, 'Personal') 
+		SELECT u.id, u.role_id, u.name, u.email, COALESCE(u.phone, ''), u.password_hash, COALESCE(r.name, 'Personal') 
 		FROM users u 
 		LEFT JOIN roles r ON u.role_id = r.id 
-		WHERE u.email = $1 OR u.email = REPLACE($1, '@casita.com', '@saborchugurano.pe')
-		LIMIT 1`, req.Email).Scan(&id, &roleId, &name, &passHash, &roleName)
+		WHERE lower(u.email) = lower($1) OR lower(u.email) = lower(REPLACE($1, '@casita.com', '@saborchugurano.pe'))
+		LIMIT 1`, strings.TrimSpace(req.Email)).Scan(&id, &roleId, &name, &email, &phone, &passHash, &roleName)
 
 	if err != nil {
 		return c.Status(401).JSON(fiber.Map{"error": "Invalid credentials"})
@@ -333,7 +336,7 @@ func loginUser(c *fiber.Ctx) error {
 		}
 	}
 
-	token, err := auth.GenerateToken(id, name, req.Email, roleId, roleName, tokenTTL())
+	token, err := auth.GenerateToken(id, name, email, roleId, roleName, tokenTTL())
 	if err != nil {
 		return jsonError(c)
 	}
@@ -348,7 +351,70 @@ func loginUser(c *fiber.Ctx) error {
 			"name":      name,
 			"role_id":   roleId,
 			"role_name": roleName,
-			"email":     req.Email,
+			"email":     email,
+			"phone":     phone,
+		},
+	})
+}
+
+type RegisterRequest struct {
+	Name     string `json:"name" validate:"required,min=2,max=100"`
+	Email    string `json:"email" validate:"required,email"`
+	Phone    string `json:"phone" validate:"required,min=6,max=30"`
+	Password string `json:"password" validate:"required,min=6,max=72"`
+}
+
+// registerUser crea una cuenta de Cliente (rol 5) y devuelve su sesión.
+func registerUser(c *fiber.Ctx) error {
+	var req RegisterRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Solicitud inválida"})
+	}
+	if errs := validation.ValidateStruct(&req); errs != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Datos inválidos", "details": errs})
+	}
+
+	name := strings.TrimSpace(req.Name)
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	phone := strings.TrimSpace(req.Phone)
+
+	var existentes int
+	if err := database.DB.QueryRow("SELECT COUNT(*) FROM users WHERE lower(email) = lower($1)", email).Scan(&existentes); err != nil {
+		return jsonError(c)
+	}
+	if existentes > 0 {
+		return c.Status(409).JSON(fiber.Map{"error": "Ya existe una cuenta con ese correo electrónico"})
+	}
+
+	hash, err := auth.HashPassword(req.Password)
+	if err != nil {
+		return jsonError(c)
+	}
+
+	var id int
+	err = database.DB.QueryRow(
+		"INSERT INTO users (role_id, name, email, phone, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		middleware.RolCliente, name, email, phone, hash,
+	).Scan(&id)
+	if err != nil {
+		return c.Status(409).JSON(fiber.Map{"error": "No se pudo crear la cuenta: el correo ya está registrado"})
+	}
+
+	token, err := auth.GenerateToken(id, name, email, middleware.RolCliente, "Cliente", tokenTTL())
+	if err != nil {
+		return jsonError(c)
+	}
+
+	return c.Status(201).JSON(fiber.Map{
+		"message": "Cuenta creada correctamente",
+		"token":   token,
+		"user": fiber.Map{
+			"id":        id,
+			"name":      name,
+			"role_id":   middleware.RolCliente,
+			"role_name": "Cliente",
+			"email":     email,
+			"phone":     phone,
 		},
 	})
 }
@@ -887,6 +953,10 @@ func createReservation(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Datos inválidos", "details": errs})
 	}
 
+	req.Name = strings.TrimSpace(req.Name)
+	req.Phone = strings.TrimSpace(req.Phone)
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
 	if req.Name == "" || req.Phone == "" || req.ReservationDate == "" || req.ReservationTime == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Nombre, teléfono, fecha y hora son obligatorios"})
 	}
@@ -895,11 +965,19 @@ func createReservation(c *fiber.Ctx) error {
 		req.GuestsCount = 2
 	}
 
+	if req.Email == "" {
+		if correo, ok := c.Locals("user_email").(string); ok {
+			req.Email = correo
+		}
+	}
+
+	userID := middleware.UserID(c)
+
 	var id int64
 	err := database.DB.QueryRow(`
-		INSERT INTO reservations (name, phone, email, reservation_date, reservation_time, guests_count, notes, status) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, 'Confirmada') RETURNING id`,
-		req.Name, req.Phone, req.Email, req.ReservationDate, req.ReservationTime, req.GuestsCount, req.Notes).Scan(&id)
+		INSERT INTO reservations (user_id, name, phone, email, reservation_date, reservation_time, guests_count, notes, status) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Confirmada') RETURNING id`,
+		userID, req.Name, req.Phone, req.Email, req.ReservationDate, req.ReservationTime, req.GuestsCount, req.Notes).Scan(&id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Error al registrar reserva: " + err.Error()})
 	}
@@ -908,6 +986,87 @@ func createReservation(c *fiber.Ctx) error {
 		"message":        "Reserva confirmada exitosamente",
 		"reservation_id": id,
 	})
+}
+
+// getMyReservations devuelve las reservas del usuario autenticado. También
+// incluye reservas antiguas hechas con su correo antes de existir user_id.
+func getMyReservations(c *fiber.Ctx) error {
+	userID := middleware.UserID(c)
+	email, _ := c.Locals("user_email").(string)
+
+	rows, err := database.DB.Query(`
+		SELECT id, name, phone, COALESCE(email, ''), reservation_date, reservation_time, guests_count, COALESCE(notes, ''), status, created_at
+		FROM reservations
+		WHERE user_id = $1 OR (user_id IS NULL AND email IS NOT NULL AND lower(email) = lower($2))
+		ORDER BY reservation_date DESC, reservation_time DESC`, userID, email)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	defer rows.Close()
+
+	reservations := []fiber.Map{}
+	for rows.Next() {
+		var id, guestsCount int
+		var name, phone, correo, resDate, resTime, notes, status, createdAt string
+
+		if err := rows.Scan(&id, &name, &phone, &correo, &resDate, &resTime, &guestsCount, &notes, &status, &createdAt); err != nil {
+			continue
+		}
+		cleanDate := resDate
+		if len(cleanDate) >= 10 {
+			cleanDate = cleanDate[:10]
+		}
+		reservations = append(reservations, fiber.Map{
+			"id":               id,
+			"name":             name,
+			"phone":            phone,
+			"email":            correo,
+			"reservation_date": cleanDate,
+			"reservation_time": resTime,
+			"guests_count":     guestsCount,
+			"notes":            notes,
+			"status":           status,
+			"created_at":       createdAt,
+		})
+	}
+	return c.JSON(reservations)
+}
+
+// cancelMyReservation permite al titular (o al personal) cancelar una reserva.
+func cancelMyReservation(c *fiber.Ctx) error {
+	id := c.Params("id")
+	userID := middleware.UserID(c)
+	roleID := middleware.RoleID(c)
+	userEmail, _ := c.Locals("user_email").(string)
+
+	var ownerID int
+	var ownerEmail, status string
+	err := database.DB.QueryRow(
+		"SELECT COALESCE(user_id, 0), COALESCE(email, ''), COALESCE(status, '') FROM reservations WHERE id = $1",
+		id,
+	).Scan(&ownerID, &ownerEmail, &status)
+	if err != nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Reserva no encontrada"})
+	}
+
+	esPersonal := roleID == middleware.RolAdministrador || roleID == middleware.RolMesero
+	esTitular := (ownerID != 0 && ownerID == userID) ||
+		(ownerID == 0 && ownerEmail != "" && strings.EqualFold(ownerEmail, userEmail))
+	if !esPersonal && !esTitular {
+		return c.Status(403).JSON(fiber.Map{"error": "No puedes cancelar una reserva que no te pertenece"})
+	}
+
+	if status == "Atendida" {
+		return c.Status(400).JSON(fiber.Map{"error": "Esta reserva ya fue atendida y no se puede cancelar"})
+	}
+	if status == "Cancelada" {
+		return c.JSON(fiber.Map{"message": "La reserva ya estaba cancelada"})
+	}
+
+	if _, err := database.DB.Exec("UPDATE reservations SET status = 'Cancelada' WHERE id = $1", id); err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Error al cancelar la reserva"})
+	}
+	return c.JSON(fiber.Map{"message": "Reserva cancelada correctamente"})
 }
 
 func getReservations(c *fiber.Ctx) error {
