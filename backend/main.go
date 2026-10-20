@@ -62,6 +62,9 @@ func main() {
 	// Migrar contraseñas heredadas en texto plano a hashes bcrypt
 	auth.MigratePlaintextPasswords(database.DB)
 
+	// Rotar las contraseñas por defecto de las cuentas sembradas
+	auth.RotateSeededPasswords(database.DB)
+
 	if os.Getenv("JWT_SECRET") == "" {
 		log.Println("Aviso: JWT_SECRET no está definido; se usará un secreto de desarrollo. Configúralo en .env")
 	}
@@ -111,7 +114,6 @@ func main() {
 	api.Get("/categories", getCategories)
 	api.Get("/daily-menus", getDailyMenus)
 	api.Get("/daily-menus/:fecha", getDailyMenuByFecha)
-	api.Post("/reservations", createReservation)
 
 	// ---------- Rutas protegidas (JWT + RBAC) ----------
 	priv := api.Group("", middleware.RequireAuth())
@@ -169,6 +171,7 @@ func main() {
 
 	// Reservas (gestión) — Administrador / Mesero
 	priv.Get("/reservations", adminOMesero, getReservations)
+	priv.Post("/reservations", personal, createReservation)
 	priv.Patch("/reservations/:id/status", adminOMesero, updateReservationStatus)
 	priv.Delete("/reservations/:id", admin, deleteReservation)
 

@@ -18,7 +18,8 @@ import {
   CalendarCheck2,
   Flame,
   Soup,
-  Check
+  Check,
+  Lock
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -100,6 +101,16 @@ export default function Home() {
     time: string;
     guests: number;
   } | null>(null);
+  const [loggedUser, setLoggedUser] = useState<{ name?: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) setLoggedUser(JSON.parse(stored));
+    } catch {
+      setLoggedUser(null);
+    }
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -151,6 +162,10 @@ export default function Home() {
 
   const handleReservationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!loggedUser) {
+      window.location.href = "/login?next=/#reservas";
+      return;
+    }
     setIsSubmittingRes(true);
 
     try {
@@ -738,6 +753,23 @@ export default function Home() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   className="bg-zinc-900/60 border border-white/10 rounded-3xl p-8 lg:p-12 shadow-2xl backdrop-blur-md"
                 >
+                  {!loggedUser ? (
+                    <div className="text-center py-8">
+                      <div className="w-20 h-20 bg-primary/15 text-primary rounded-3xl flex items-center justify-center mx-auto mb-6 border border-primary/30">
+                        <Lock className="w-9 h-9" />
+                      </div>
+                      <h3 className="text-2xl font-black text-white mb-3">Inicia sesión para reservar</h3>
+                      <p className="text-zinc-400 text-sm max-w-md mx-auto mb-8">
+                        Por seguridad, las reservas solo pueden registrarse con una cuenta autorizada del restaurante.
+                      </p>
+                      <Link
+                        href="/login?next=/#reservas"
+                        className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-primary-foreground font-black rounded-2xl text-sm hover:bg-primary/90 transition-all shadow-[0_0_25px_rgba(204,153,51,0.3)]"
+                      >
+                        Iniciar Sesión <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  ) : (
                   <form onSubmit={handleReservationSubmit} className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
@@ -849,6 +881,7 @@ export default function Home() {
                       {isSubmittingRes ? "Confirmando tu reserva..." : "Confirmar Reserva Inmediata ➔"}
                     </button>
                   </form>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

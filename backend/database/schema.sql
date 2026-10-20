@@ -185,8 +185,9 @@ INSERT OR IGNORE INTO menu_items (id, category_id, name, description, price, ima
 (32, 7, 'Gaseosa / Refresco Personal', 'Bebida helada personal (Inca Kola / Coca Cola de 500ml).', 5.00, '/images/chicha_morada.png', 1);
 
 -- Usuarios de Sabor Chugurano
+-- El backend reemplaza este marcador por una contraseña aleatoria fuerte al iniciar.
 INSERT OR IGNORE INTO users (id, role_id, name, email, password_hash) VALUES 
-(1, 1, 'Administrador General', 'admin@saborchugurano.pe', 'admin123'),
-(2, 2, 'Juan Pérez (Mesero)', 'mesero@saborchugurano.pe', 'mesero123'),
-(3, 3, 'Carlos Morales (Cajero)', 'cajero@saborchugurano.pe', 'cajero123'),
-(4, 4, 'Doña Rosa (Cocinera Chef)', 'cocina@saborchugurano.pe', 'cocina123');
+(1, 1, 'Administrador General', 'admin@saborchugurano.pe', '__ROTATE_ON_START__'),
+(2, 2, 'Juan Pérez (Mesero)', 'mesero@saborchugurano.pe', '__ROTATE_ON_START__'),
+(3, 3, 'Carlos Morales (Cajero)', 'cajero@saborchugurano.pe', '__ROTATE_ON_START__'),
+(4, 4, 'Doña Rosa (Cocinera Chef)', 'cocina@saborchugurano.pe', '__ROTATE_ON_START__');

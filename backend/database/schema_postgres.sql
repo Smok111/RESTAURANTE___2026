@@ -198,11 +198,13 @@ INSERT INTO menu_items (id, category_id, name, description, price, image_url, is
 ON CONFLICT (id) DO NOTHING;
 
 -- Usuarios de Sabor Chugurano
+-- La contraseña inicial es un marcador: el backend genera una contraseña
+-- aleatoria fuerte en el primer arranque y la muestra en los logs de Render.
 INSERT INTO users (id, role_id, name, email, password_hash) VALUES
-(1, 1, 'Administrador General', 'admin@saborchugurano.pe', 'admin123'),
-(2, 2, 'Juan Pérez (Mesero)', 'mesero@saborchugurano.pe', 'mesero123'),
-(3, 3, 'Carlos Morales (Cajero)', 'cajero@saborchugurano.pe', 'cajero123'),
-(4, 4, 'Doña Rosa (Cocinera Chef)', 'cocina@saborchugurano.pe', 'cocina123')
+(1, 1, 'Administrador General', 'admin@saborchugurano.pe', '__ROTATE_ON_START__'),
+(2, 2, 'Juan Pérez (Mesero)', 'mesero@saborchugurano.pe', '__ROTATE_ON_START__'),
+(3, 3, 'Carlos Morales (Cajero)', 'cajero@saborchugurano.pe', '__ROTATE_ON_START__'),
+(4, 4, 'Doña Rosa (Cocinera Chef)', 'cocina@saborchugurano.pe', '__ROTATE_ON_START__')
 ON CONFLICT (id) DO NOTHING;
 
 -- ===================== Sincronizar secuencias =====================

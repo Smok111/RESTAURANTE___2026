@@ -37,8 +37,11 @@ export default function Login() {
         } else {
           localStorage.setItem("user", JSON.stringify(data.user));
         }
-        // Redirigir según el rol
-        if (data.user.role_id === 1) {
+        // Redirigir según el rol (o a la página solicitada)
+        const next = new URLSearchParams(window.location.search).get("next");
+        if (next && next.startsWith("/")) {
+          router.push(next);
+        } else if (data.user.role_id === 1) {
           router.push("/dashboard");
         } else if (data.user.role_id === 2) {
           router.push("/pedidos");
@@ -58,12 +61,6 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fillCredentials = (userEmail: string, userPass: string) => {
-    setEmail(userEmail);
-    setPassword(userPass);
-    setError("");
   };
 
   return (
@@ -191,57 +188,6 @@ export default function Login() {
               )}
             </button>
           </form>
-
-          <div className="mt-8 pt-6 border-t border-white/5 space-y-3">
-            <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider text-center">
-              Acceso Rápido por Rol
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => fillCredentials("admin@saborchugurano.pe", "admin123")}
-                className="p-3 bg-zinc-900/70 hover:bg-primary/20 hover:border-primary/40 border border-white/5 rounded-xl text-left transition-all cursor-pointer group"
-              >
-                <div className="font-bold text-white group-hover:text-primary flex items-center gap-1.5">
-                  👑 Administrador
-                </div>
-                <div className="text-[10px] text-zinc-500 mt-0.5 truncate">admin@saborchugurano.pe</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fillCredentials("mesero@saborchugurano.pe", "mesero123")}
-                className="p-3 bg-zinc-900/70 hover:bg-primary/20 hover:border-primary/40 border border-white/5 rounded-xl text-left transition-all cursor-pointer group"
-              >
-                <div className="font-bold text-white group-hover:text-primary flex items-center gap-1.5">
-                  🛎️ Mesero
-                </div>
-                <div className="text-[10px] text-zinc-500 mt-0.5 truncate">mesero@saborchugurano.pe</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fillCredentials("cocina@saborchugurano.pe", "cocina123")}
-                className="p-3 bg-zinc-900/70 hover:bg-amber-500/20 hover:border-amber-500/40 border border-white/5 rounded-xl text-left transition-all cursor-pointer group"
-              >
-                <div className="font-bold text-white group-hover:text-amber-400 flex items-center gap-1.5">
-                  👨‍🍳 Cocinero / Chef
-                </div>
-                <div className="text-[10px] text-zinc-500 mt-0.5 truncate">cocina@saborchugurano.pe</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fillCredentials("cajero@saborchugurano.pe", "cajero123")}
-                className="p-3 bg-zinc-900/70 hover:bg-emerald-500/20 hover:border-emerald-500/40 border border-white/5 rounded-xl text-left transition-all cursor-pointer group"
-              >
-                <div className="font-bold text-white group-hover:text-emerald-400 flex items-center gap-1.5">
-                  💵 Cajero
-                </div>
-                <div className="text-[10px] text-zinc-500 mt-0.5 truncate">cajero@saborchugurano.pe</div>
-              </button>
-            </div>
-          </div>
 
         </motion.div>
       </div>
