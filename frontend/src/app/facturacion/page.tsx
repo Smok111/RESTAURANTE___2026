@@ -17,6 +17,8 @@ import {
   User,
   AlertCircle,
   Eye,
+  Pencil,
+  X,
   RefreshCw
 } from "lucide-react";
 import Logo from "@/components/Logo";
@@ -29,11 +31,108 @@ import {
   eliminarCliente,
   obtenerVentas,
   registrarVenta,
+  actualizarVenta,
   anularVenta
 } from "@/lib/facturacion";
 import { consultarDNI, consultarRUC } from "@/lib/reniecRuc";
 
 type TabType = "emitir" | "historial" | "clientes";
+
+type TicketData = {
+  tipoComprobante: "boleta" | "factura";
+  serie: string;
+  numero: string;
+  fecha: string;
+  clienteNombre: string;
+  clienteDocumento: string;
+  clienteDireccion?: string;
+  metodoPago: string;
+  items: DetalleVenta[];
+  subtotal: number;
+  igv: number;
+  total: number;
+};
+
+function TicketComprobante({ data }: { data: TicketData }) {
+  return (
+    <div className="bg-white text-zinc-900 rounded-2xl p-6 shadow-2xl font-mono text-xs border border-zinc-300 print:rounded-none print:border-0 print:p-0 print:shadow-none print:w-[72mm]">
+      <div className="text-center pb-4 border-b border-dashed border-zinc-400">
+        <div className="w-16 h-16 mx-auto mb-2 relative print:w-12 print:h-12">
+          <img
+            src="/images/logo_sabor_chugurano.png"
+            alt="Logo"
+            className="w-full h-full object-contain rounded-full"
+          />
+        </div>
+        <h2 className="font-bold text-base tracking-wider uppercase">SABOR CHUGURANO</h2>
+        <p className="text-[10px] text-zinc-600">RESTAURANTE Y EVENTOS E.I.R.L.</p>
+        <p className="text-[10px] text-zinc-600">RUC: 20601234567</p>
+        <p className="text-[10px] text-zinc-600">Av. Principal 123 - Centro Gastronómico</p>
+        <p className="text-[10px] text-zinc-600">Tel: (01) 987-654-321</p>
+      </div>
+
+      <div className="py-3 border-b border-dashed border-zinc-400 space-y-1">
+        <div className="font-bold text-center text-sm uppercase">
+          {data.tipoComprobante === "boleta" ? "BOLETA DE VENTA ELECTRÓNICA" : "FACTURA ELECTRÓNICA"}
+        </div>
+        <div className="text-center font-bold">
+          {data.serie} - {data.numero}
+        </div>
+        <div className="pt-2 text-[10px] space-y-0.5 text-zinc-700">
+          <div>FECHA: {data.fecha}</div>
+          <div>CLIENTE: {data.clienteNombre}</div>
+          <div>{data.tipoComprobante === "boleta" ? "DNI" : "RUC"}: {data.clienteDocumento || "-"}</div>
+          {data.clienteDireccion && <div>DIR: {data.clienteDireccion}</div>}
+          <div>FORMA PAGO: {data.metodoPago}</div>
+        </div>
+      </div>
+
+      <div className="py-3 border-b border-dashed border-zinc-400">
+        <table className="w-full text-[10px]">
+          <thead>
+            <tr className="border-b border-zinc-300 text-left font-bold">
+              <th className="pb-1">CANT</th>
+              <th className="pb-1">DESCRIPCIÓN</th>
+              <th className="pb-1 text-right">P.U.</th>
+              <th className="pb-1 text-right">TOTAL</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-200">
+            {data.items.map((it, idx) => (
+              <tr key={idx}>
+                <td className="py-1 align-top">{it.cantidad}</td>
+                <td className="py-1 pr-1">{it.nombre}</td>
+                <td className="py-1 text-right">S/ {it.precio_unitario.toFixed(2)}</td>
+                <td className="py-1 text-right font-semibold">S/ {it.subtotal.toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="py-3 border-b border-dashed border-zinc-400 text-[11px] space-y-1">
+        <div className="flex justify-between">
+          <span>OP. GRAVADA:</span>
+          <span>S/ {data.subtotal.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>I.G.V. (18%):</span>
+          <span>S/ {data.igv.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between font-bold text-sm pt-1 border-t border-zinc-300">
+          <span>IMPORTE TOTAL:</span>
+          <span>S/ {data.total.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div className="pt-4 text-center space-y-1 text-[9px] text-zinc-500">
+        <p>Representación impresa del Comprobante Electrónico</p>
+        <p>Autorizado mediante resolución SUNAT</p>
+        <p className="font-bold text-zinc-800">¡Gracias por su preferencia!</p>
+      </div>
+    </div>
+  );
+}
 
 export default function FacturacionPage() {
   const [tab, setTab] = useState<TabType>("emitir");
@@ -59,6 +158,15 @@ export default function FacturacionPage() {
 
   // Estado para visualización / impresión
   const [comprobanteSeleccionado, setComprobanteSeleccionado] = useState<Venta | null>(null);
+
+  // Estado para edición de los datos del comprobante
+  const [editando, setEditando] = useState<Venta | null>(null);
+  const [editForm, setEditForm] = useState({
+    cliente_nombre: "",
+    cliente_documento: "",
+    direccion: "",
+    metodo_pago: "Efectivo" as Venta["metodo_pago"],
+  });
 
   // Estado para nuevo cliente manual
   const [nuevoCliente, setNuevoCliente] = useState<{
@@ -308,10 +416,68 @@ export default function FacturacionPage() {
     }
   };
 
+  const ticketFormulario: TicketData = {
+    tipoComprobante,
+    serie,
+    numero: String(ventas.length + 46).padStart(6, "0"),
+    fecha: `${new Date().toLocaleDateString("es-PE")} ${new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}`,
+    clienteNombre: clienteNombre || "CLIENTES VARIOS",
+    clienteDocumento: documentoNumero || "-",
+    clienteDireccion: clienteDireccion || undefined,
+    metodoPago,
+    items,
+    subtotal: subtotalCalculado,
+    igv: igvCalculado,
+    total: totalCalculado,
+  };
+
+  const ticketSeleccionado: TicketData | null = comprobanteSeleccionado
+    ? {
+      tipoComprobante: comprobanteSeleccionado.tipo.toLowerCase() === "factura" ? "factura" : "boleta",
+      serie: comprobanteSeleccionado.serie,
+      numero: comprobanteSeleccionado.numero,
+      fecha: comprobanteSeleccionado.fecha,
+      clienteNombre: comprobanteSeleccionado.cliente_nombre,
+      clienteDocumento: comprobanteSeleccionado.cliente_documento,
+      clienteDireccion: comprobanteSeleccionado.direccion || undefined,
+      metodoPago: comprobanteSeleccionado.metodo_pago,
+      items: comprobanteSeleccionado.productos,
+      subtotal: comprobanteSeleccionado.subtotal,
+      igv: comprobanteSeleccionado.igv,
+      total: comprobanteSeleccionado.total,
+    }
+    : null;
+
+  const ticketParaImprimir = tab === "historial" ? ticketSeleccionado : tab === "emitir" ? ticketFormulario : null;
+
+  const abrirEdicion = (venta: Venta) => {
+    setEditando(venta);
+    setEditForm({
+      cliente_nombre: venta.cliente_nombre,
+      cliente_documento: venta.cliente_documento,
+      direccion: venta.direccion || "",
+      metodo_pago: venta.metodo_pago,
+    });
+  };
+
+  const handleGuardarEdicion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editando) return;
+    try {
+      await actualizarVenta(editando.id, editForm);
+      const lista = await obtenerVentas();
+      setVentas(lista);
+      setComprobanteSeleccionado(lista.find((v) => v.id === editando.id) || null);
+      setEditando(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "No se pudo actualizar el comprobante");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-foreground flex flex-col">
+    <div className="min-h-screen bg-zinc-950 print:bg-white text-foreground flex flex-col">
       {/* Barra Superior */}
-      <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-40 px-4 lg:px-8 py-3">
+      <header className="print:hidden border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-40 px-4 lg:px-8 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link href="/dashboard" className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300">
@@ -340,25 +506,33 @@ export default function FacturacionPage() {
             >
               Comandas
             </Link>
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-zinc-950 text-xs font-bold transition"
-            >
-              <Printer className="w-4 h-4" />
-              Imprimir
-            </button>
+            {tab !== "clientes" && (
+              <button
+                onClick={() => {
+                  if (tab === "historial" && !comprobanteSeleccionado) {
+                    alert("Selecciona un comprobante con el ícono del ojo para imprimirlo");
+                    return;
+                  }
+                  window.print();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-zinc-950 text-xs font-bold transition"
+              >
+                <Printer className="w-4 h-4" />
+                Imprimir
+              </button>
+            )}
           </div>
         </div>
       </header>
 
       {/* Tabs */}
-      <div className="border-b border-zinc-800 bg-zinc-900/40">
+      <div className="print:hidden border-b border-zinc-800 bg-zinc-900/40">
         <div className="max-w-7xl mx-auto px-4 lg:px-8 flex gap-2">
           <button
             onClick={() => setTab("emitir")}
             className={`py-3 px-4 text-sm font-semibold border-b-2 flex items-center gap-2 transition ${tab === "emitir"
-                ? "border-amber-500 text-amber-400 bg-amber-500/10"
-                : "border-transparent text-zinc-400 hover:text-white"
+              ? "border-amber-500 text-amber-400 bg-amber-500/10"
+              : "border-transparent text-zinc-400 hover:text-white"
               }`}
           >
             <FileText className="w-4 h-4" />
@@ -367,8 +541,8 @@ export default function FacturacionPage() {
           <button
             onClick={() => setTab("historial")}
             className={`py-3 px-4 text-sm font-semibold border-b-2 flex items-center gap-2 transition ${tab === "historial"
-                ? "border-amber-500 text-amber-400 bg-amber-500/10"
-                : "border-transparent text-zinc-400 hover:text-white"
+              ? "border-amber-500 text-amber-400 bg-amber-500/10"
+              : "border-transparent text-zinc-400 hover:text-white"
               }`}
           >
             <ReceiptText className="w-4 h-4" />
@@ -377,8 +551,8 @@ export default function FacturacionPage() {
           <button
             onClick={() => setTab("clientes")}
             className={`py-3 px-4 text-sm font-semibold border-b-2 flex items-center gap-2 transition ${tab === "clientes"
-                ? "border-amber-500 text-amber-400 bg-amber-500/10"
-                : "border-transparent text-zinc-400 hover:text-white"
+              ? "border-amber-500 text-amber-400 bg-amber-500/10"
+              : "border-transparent text-zinc-400 hover:text-white"
               }`}
           >
             <User className="w-4 h-4" />
@@ -388,7 +562,7 @@ export default function FacturacionPage() {
       </div>
 
       {/* Contenido Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
+      <main className="print:hidden flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
         {/* PESTAÑA 1: EMITIR COMPROBANTE */}
         {tab === "emitir" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -405,8 +579,8 @@ export default function FacturacionPage() {
                       type="button"
                       onClick={() => setTipoComprobante("boleta")}
                       className={`p-3 rounded-xl border flex items-center justify-center gap-2 font-bold text-sm transition ${tipoComprobante === "boleta"
-                          ? "bg-amber-500 text-zinc-950 border-amber-400 shadow-md"
-                          : "bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                        ? "bg-amber-500 text-zinc-950 border-amber-400 shadow-md"
+                        : "bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
                         }`}
                     >
                       <User className="w-4 h-4" />
@@ -416,8 +590,8 @@ export default function FacturacionPage() {
                       type="button"
                       onClick={() => setTipoComprobante("factura")}
                       className={`p-3 rounded-xl border flex items-center justify-center gap-2 font-bold text-sm transition ${tipoComprobante === "factura"
-                          ? "bg-amber-500 text-zinc-950 border-amber-400 shadow-md"
-                          : "bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                        ? "bg-amber-500 text-zinc-950 border-amber-400 shadow-md"
+                        : "bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
                         }`}
                     >
                       <Building2 className="w-4 h-4" />
@@ -647,85 +821,7 @@ export default function FacturacionPage() {
 
             {/* Vista Previa del Ticket / Factura */}
             <div className="lg:col-span-5">
-              <div className="bg-white text-zinc-900 rounded-2xl p-6 shadow-2xl font-mono text-xs border border-zinc-300">
-                <div className="text-center pb-4 border-b border-dashed border-zinc-400">
-                  <div className="w-16 h-16 mx-auto mb-2 relative">
-                    <img
-                      src="/images/logo_sabor_chugurano.png"
-                      alt="Logo"
-                      className="w-full h-full object-contain rounded-full"
-                    />
-                  </div>
-                  <h2 className="font-bold text-base tracking-wider uppercase">SABOR CHUGURANO</h2>
-                  <p className="text-[10px] text-zinc-600">RESTAURANTE Y EVENTOS E.I.R.L.</p>
-                  <p className="text-[10px] text-zinc-600">RUC: 20601234567</p>
-                  <p className="text-[10px] text-zinc-600">Av. Principal 123 - Centro Gastronómico</p>
-                  <p className="text-[10px] text-zinc-600">Tel: (01) 987-654-321</p>
-                </div>
-
-                <div className="py-3 border-b border-dashed border-zinc-400 space-y-1">
-                  <div className="font-bold text-center text-sm uppercase">
-                    {tipoComprobante === "boleta" ? "BOLETA DE VENTA ELECTRÓNICA" : "FACTURA ELECTRÓNICA"}
-                  </div>
-                  <div className="text-center font-bold">
-                    {serie} - {String(ventas.length + 46).padStart(6, "0")}
-                  </div>
-                  <div className="pt-2 text-[10px] space-y-0.5 text-zinc-700">
-                    <div>FECHA: {new Date().toLocaleDateString("es-PE")} {new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}</div>
-                    <div>CLIENTE: {clienteNombre || "CLIENTES VARIOS"}</div>
-                    <div>{tipoComprobante === "boleta" ? "DNI" : "RUC"}: {documentoNumero || "-"}</div>
-                    {clienteDireccion && <div>DIR: {clienteDireccion}</div>}
-                    <div>FORMA PAGO: {metodoPago}</div>
-                  </div>
-                </div>
-
-                {/* Items */}
-                <div className="py-3 border-b border-dashed border-zinc-400">
-                  <table className="w-full text-[10px]">
-                    <thead>
-                      <tr className="border-b border-zinc-300 text-left font-bold">
-                        <th className="pb-1">CANT</th>
-                        <th className="pb-1">DESCRIPCIÓN</th>
-                        <th className="pb-1 text-right">P.U.</th>
-                        <th className="pb-1 text-right">TOTAL</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-200">
-                      {items.map((it, idx) => (
-                        <tr key={idx}>
-                          <td className="py-1 align-top">{it.cantidad}</td>
-                          <td className="py-1 pr-1">{it.nombre}</td>
-                          <td className="py-1 text-right">S/ {it.precio_unitario.toFixed(2)}</td>
-                          <td className="py-1 text-right font-semibold">S/ {it.subtotal.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Totales */}
-                <div className="py-3 border-b border-dashed border-zinc-400 text-[11px] space-y-1">
-                  <div className="flex justify-between">
-                    <span>OP. GRAVADA:</span>
-                    <span>S/ {subtotalCalculado.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>I.G.V. (18%):</span>
-                    <span>S/ {igvCalculado.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between font-bold text-sm pt-1 border-t border-zinc-300">
-                    <span>IMPORTE TOTAL:</span>
-                    <span>S/ {totalCalculado.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {/* Pie SUNAT */}
-                <div className="pt-4 text-center space-y-1 text-[9px] text-zinc-500">
-                  <p>Representación impresa del Comprobante Electrónico</p>
-                  <p>Autorizado mediante resolución SUNAT</p>
-                  <p className="font-bold text-zinc-800">¡Gracias por su preferencia!</p>
-                </div>
-              </div>
+              <TicketComprobante data={ticketFormulario} />
             </div>
           </div>
         )}
@@ -777,8 +873,8 @@ export default function FacturacionPage() {
                         <td className="py-3 px-4 text-center">
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${v.estado === "Emitida"
-                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                              ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                              : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
                               }`}
                           >
                             {v.estado}
@@ -787,15 +883,21 @@ export default function FacturacionPage() {
                         <td className="py-3 px-4 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button
-                              onClick={() => {
-                                setComprobanteSeleccionado(v);
-                                window.scrollTo({ top: 0, behavior: "smooth" });
-                              }}
+                              onClick={() => setComprobanteSeleccionado(v)}
                               title="Ver detalle"
                               className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
+                            {v.estado === "Emitida" && (
+                              <button
+                                onClick={() => abrirEdicion(v)}
+                                title="Editar datos del comprobante"
+                                className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-amber-400"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            )}
                             {v.estado === "Emitida" && (
                               <button
                                 onClick={() => handleAnularVenta(v.id)}
@@ -814,51 +916,108 @@ export default function FacturacionPage() {
               </div>
             </div>
 
-            {/* Modal o Tarjeta de Detalle del Comprobante Seleccionado */}
-            {comprobanteSeleccionado && (
-              <div className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6 shadow-2xl">
-                <div className="flex justify-between items-center mb-4 border-b border-zinc-800 pb-3">
-                  <h3 className="font-bold text-amber-400 flex items-center gap-2">
-                    <ReceiptText className="w-5 h-5" />
-                    Detalle de {comprobanteSeleccionado.tipo.toUpperCase()}: {comprobanteSeleccionado.serie}-{comprobanteSeleccionado.numero}
+            {/* Modal de detalle del comprobante seleccionado */}
+            {comprobanteSeleccionado && ticketSeleccionado && (
+              <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-4 backdrop-blur-sm">
+                <div className="mx-auto my-8 w-full max-w-sm space-y-3">
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => window.print()}
+                      className="px-3 py-1.5 bg-amber-500 text-zinc-950 font-bold rounded-lg text-xs flex items-center gap-1.5"
+                    >
+                      <Printer className="w-4 h-4" /> Imprimir
+                    </button>
+                    {comprobanteSeleccionado.estado === "Emitida" && (
+                      <button
+                        onClick={() => abrirEdicion(comprobanteSeleccionado)}
+                        className="px-3 py-1.5 bg-zinc-800 text-amber-400 font-bold rounded-lg text-xs flex items-center gap-1.5"
+                      >
+                        <Pencil className="w-4 h-4" /> Editar
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setComprobanteSeleccionado(null)}
+                      className="p-1.5 bg-zinc-800 text-zinc-300 rounded-lg"
+                      title="Cerrar"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <TicketComprobante data={ticketSeleccionado} />
+                </div>
+              </div>
+            )}
+
+            {/* Modal de edición de datos del comprobante */}
+            {editando && (
+              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+                <form
+                  onSubmit={handleGuardarEdicion}
+                  className="w-full max-w-md space-y-4 rounded-2xl border border-amber-500/30 bg-zinc-900 p-6 shadow-2xl"
+                >
+                  <h3 className="text-lg font-bold text-amber-400 flex items-center gap-2">
+                    <Pencil className="w-5 h-5" />
+                    Editar comprobante {editando.serie}-{editando.numero}
                   </h3>
-                  <button
-                    onClick={() => window.print()}
-                    className="px-3 py-1.5 bg-amber-500 text-zinc-950 font-bold rounded-lg text-xs flex items-center gap-1.5"
-                  >
-                    <Printer className="w-4 h-4" /> Imprimir Comprobante
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-zinc-300 mb-4">
-                  <div><strong>Cliente:</strong> {comprobanteSeleccionado.cliente_nombre}</div>
-                  <div><strong>Doc:</strong> {comprobanteSeleccionado.cliente_documento}</div>
-                  <div><strong>Fecha:</strong> {comprobanteSeleccionado.fecha}</div>
-                  <div><strong>Estado:</strong> {comprobanteSeleccionado.estado}</div>
-                  <div><strong>Pago:</strong> {comprobanteSeleccionado.metodo_pago}</div>
-                  <div><strong>Total:</strong> S/ {comprobanteSeleccionado.total.toFixed(2)}</div>
-                </div>
-                <div className="border border-zinc-800 rounded-xl overflow-hidden">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-zinc-950 text-zinc-400">
-                      <tr>
-                        <th className="p-2">Ítem</th>
-                        <th className="p-2 text-center">Cant.</th>
-                        <th className="p-2 text-right">P. Unitario</th>
-                        <th className="p-2 text-right">Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-800">
-                      {comprobanteSeleccionado.productos.map((p, idx) => (
-                        <tr key={idx}>
-                          <td className="p-2 text-white">{p.nombre}</td>
-                          <td className="p-2 text-center">{p.cantidad}</td>
-                          <td className="p-2 text-right">S/ {p.precio_unitario.toFixed(2)}</td>
-                          <td className="p-2 text-right font-bold text-amber-400">S/ {p.subtotal.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-zinc-400">Cliente</label>
+                    <input
+                      type="text"
+                      required
+                      value={editForm.cliente_nombre}
+                      onChange={(e) => setEditForm({ ...editForm, cliente_nombre: e.target.value })}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-zinc-400">Documento</label>
+                    <input
+                      type="text"
+                      required
+                      value={editForm.cliente_documento}
+                      onChange={(e) => setEditForm({ ...editForm, cliente_documento: e.target.value.replace(/\D/g, "") })}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-zinc-400">Dirección</label>
+                    <input
+                      type="text"
+                      value={editForm.direccion}
+                      onChange={(e) => setEditForm({ ...editForm, direccion: e.target.value })}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-zinc-400">Método de pago</label>
+                    <select
+                      value={editForm.metodo_pago}
+                      onChange={(e) => setEditForm({ ...editForm, metodo_pago: e.target.value as Venta["metodo_pago"] })}
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white"
+                    >
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Yape">Yape</option>
+                      <option value="Plin">Plin</option>
+                      <option value="Tarjeta">Tarjeta de Débito / Crédito</option>
+                      <option value="Transferencia">Transferencia Bancaria</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditando(null)}
+                      className="px-4 py-2 rounded-lg text-zinc-400 hover:text-white text-xs font-bold"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 rounded-lg text-xs font-bold"
+                    >
+                      Guardar cambios
+                    </button>
+                  </div>
+                </form>
               </div>
             )}
           </div>
@@ -985,6 +1144,13 @@ export default function FacturacionPage() {
           </div>
         )}
       </main>
+
+      {/* Área exclusiva de impresión: solo se imprime el comprobante */}
+      {ticketParaImprimir && (
+        <div id="ticket-print" className="hidden print:block">
+          <TicketComprobante data={ticketParaImprimir} />
+        </div>
+      )}
     </div>
   );
 }

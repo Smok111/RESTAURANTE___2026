@@ -149,6 +149,7 @@ func main() {
 	// Ventas / Facturación — Administrador / Cajero
 	priv.Get("/ventas", adminOCaja, getVentas)
 	priv.Post("/ventas", adminOCaja, createVenta)
+	priv.Patch("/ventas/:id", adminOCaja, updateVenta)
 	priv.Patch("/ventas/:id/anular", admin, anularVenta)
 
 	// Órdenes
@@ -1609,6 +1610,36 @@ func createVenta(c *fiber.Ctx) error {
 
 	tx.Commit()
 	return c.Status(201).JSON(fiber.Map{"message": "Comprobante emitido", "id": ventaID})
+}
+
+type UpdateVentaRequest struct {
+	ClienteNombre    string `json:"cliente_nombre" validate:"required,min=2,max=150"`
+	ClienteDocumento string `json:"cliente_documento" validate:"required,max=20"`
+	Direccion        string `json:"direccion" validate:"max=200"`
+	MetodoPago       string `json:"metodo_pago" validate:"required,max=50"`
+}
+
+func updateVenta(c *fiber.Ctx) error {
+	id := c.Params("id")
+	var req UpdateVentaRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid request"})
+	}
+	if errs := validation.ValidateStruct(&req); errs != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Datos inválidos", "details": errs})
+	}
+
+	res, err := database.DB.Exec(`
+		UPDATE ventas SET cliente_nombre = $1, cliente_documento = $2, direccion = $3, metodo_pago = $4
+		WHERE id = $5`, req.ClienteNombre, req.ClienteDocumento, req.Direccion, req.MetodoPago, id)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "No se pudo actualizar el comprobante"})
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return c.Status(404).JSON(fiber.Map{"error": "Comprobante no encontrado"})
+	}
+
+	return c.JSON(fiber.Map{"message": "Comprobante actualizado"})
 }
 
 func anularVenta(c *fiber.Ctx) error {

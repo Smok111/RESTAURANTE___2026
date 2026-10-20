@@ -102,6 +102,18 @@
   --pink-accent: oklch(0.7 0.2 350);
 }
 
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

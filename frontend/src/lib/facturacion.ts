@@ -109,6 +109,18 @@ export async function registrarVenta(venta: Venta): Promise<Venta> {
   return { ...venta, id: data.id };
 }
 
+export async function actualizarVenta(
+  id: number,
+  datos: Pick<Venta, "cliente_nombre" | "cliente_documento" | "direccion" | "metodo_pago">
+): Promise<void> {
+  const res = await apiFetch(`/ventas/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(datos),
+  });
+  if (!res.ok) throw new Error(await errorMessage(res));
+}
+
 export async function anularVenta(id: number): Promise<void> {
   const res = await apiFetch(`/ventas/${id}/anular`, { method: "PATCH" });
   if (!res.ok) throw new Error(await errorMessage(res));
