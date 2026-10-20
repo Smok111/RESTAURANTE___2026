@@ -31,7 +31,8 @@ import {
   Mail,
   MessageSquare,
   Image as ImageIcon,
-  Upload
+  Upload,
+  Menu
 } from "lucide-react";
 
 
@@ -113,6 +114,7 @@ export default function Dashboard() {
   const [reservationFilter, setReservationFilter] = useState("todas");
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("resumen");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Modal para ver detalle de orden (Item 4)
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
@@ -422,6 +424,13 @@ export default function Dashboard() {
     router.push("/");
   };
 
+  const handleNavSelect = (tab: string) => {
+    setActiveTab(tab);
+    setMobileNavOpen(false);
+  };
+
+  const pendingReservations = reservations.filter(r => r.status === 'Pendiente').length;
+
   if (!user) return null;
 
   // Métricas
@@ -447,99 +456,7 @@ export default function Dashboard() {
         </div>
 
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto custom-scrollbar">
-          <button
-            onClick={() => setActiveTab("resumen")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${activeTab === "resumen" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-white hover:bg-white/5"
-              }`}
-          >
-            <LayoutDashboard className="w-5 h-5" /> Resumen General
-          </button>
-
-          <button
-            onClick={() => setActiveTab("ordenes")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${activeTab === "ordenes" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-white hover:bg-white/5"
-              }`}
-          >
-            <ReceiptText className="w-5 h-5" /> Gestión de Órdenes
-          </button>
-
-          <button
-            onClick={() => setActiveTab("mesas")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${activeTab === "mesas" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-white hover:bg-white/5"
-              }`}
-          >
-            <Grid3X3 className="w-5 h-5" /> Mapa de Mesas
-          </button>
-
-          <button
-            onClick={() => setActiveTab("reservas")}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm ${activeTab === "reservas" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-white hover:bg-white/5"
-              }`}
-          >
-            <span className="flex items-center gap-3">
-              <CalendarCheck className="w-5 h-5" /> Reservaciones
-            </span>
-            {reservations.filter(r => r.status === 'Pendiente').length > 0 && (
-              <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeTab === 'reservas' ? 'bg-black/25 text-white' : 'bg-amber-500/20 text-amber-400'
-                }`}>
-                {reservations.filter(r => r.status === 'Pendiente').length}
-              </span>
-            )}
-          </button>
-
-          <Link
-            href="/caja"
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20"
-          >
-            <span className="flex items-center gap-3">
-              <Receipt className="w-5 h-5" /> Punto de Caja
-            </span>
-            <span className="text-xs bg-emerald-500/20 px-2 py-0.5 rounded-full font-bold">POS</span>
-          </Link>
-
-          <Link
-            href="/facturacion"
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm text-amber-400 hover:bg-amber-500/10 border border-amber-500/20"
-          >
-            <span className="flex items-center gap-3">
-              <ReceiptText className="w-5 h-5" /> Facturación
-            </span>
-            <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded-full font-bold">SUNAT</span>
-          </Link>
-
-          <Link
-            href="/menu-diario"
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm text-amber-300 hover:bg-amber-500/10 border border-amber-500/20"
-          >
-            <span className="flex items-center gap-3">
-              <Calendar className="w-5 h-5" /> Menú del Día
-            </span>
-            <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded-full font-bold">S/ 10</span>
-          </Link>
-
-          <button
-            onClick={() => setActiveTab("menu")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${activeTab === "menu" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-white hover:bg-white/5"
-              }`}
-          >
-            <BookOpen className="w-5 h-5" /> Carta & Menú
-          </button>
-
-          <button
-            onClick={() => setActiveTab("personal")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${activeTab === "personal" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-white hover:bg-white/5"
-              }`}
-          >
-            <Users className="w-5 h-5" /> Personal
-          </button>
-
-          <button
-            onClick={() => setActiveTab("configuracion")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${activeTab === "configuracion" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-zinc-400 hover:text-white hover:bg-white/5"
-              }`}
-          >
-            <Settings className="w-5 h-5" /> Configuración
-          </button>
+          <DashboardNav activeTab={activeTab} onSelect={handleNavSelect} pendingReservations={pendingReservations} />
         </nav>
 
         <div className="p-4 border-t border-white/5">
@@ -558,14 +475,97 @@ export default function Dashboard() {
         </div>
       </aside>
 
+      {/* Mobile Top Bar */}
+      <header className="md:hidden fixed top-0 inset-x-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-white/5">
+        <div className="flex items-center justify-between px-4 py-3">
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            className="p-2 -ml-2 text-zinc-300 hover:text-white transition-colors"
+            aria-label="Abrir menú"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <Link href="/" className="flex items-center gap-2">
+            <Logo size={30} showText={false} />
+            <span className="font-black text-sm tracking-wider text-white">SABOR CHUGURANO</span>
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="p-2 -mr-2 text-red-400 hover:text-red-300 transition-colors"
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Navigation Drawer */}
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileNavOpen(false)}
+              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm md:hidden"
+            />
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="fixed top-0 left-0 bottom-0 z-50 w-72 max-w-[82vw] bg-zinc-900 border-r border-white/10 flex flex-col md:hidden"
+            >
+              <div className="p-6 border-b border-white/5 flex items-center justify-between gap-2">
+                <Link href="/" className="flex items-center gap-3" onClick={() => setMobileNavOpen(false)}>
+                  <Logo size={38} showText={false} />
+                  <div>
+                    <div className="font-black tracking-wider text-sm text-white">Sabor Chugurano</div>
+                    <div className="text-[10px] text-amber-400 font-bold tracking-widest uppercase">Panel Integral</div>
+                  </div>
+                </Link>
+                <button
+                  onClick={() => setMobileNavOpen(false)}
+                  className="p-2 text-zinc-400 hover:text-white transition-colors"
+                  aria-label="Cerrar menú"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+                <DashboardNav activeTab={activeTab} onSelect={handleNavSelect} pendingReservations={pendingReservations} />
+              </nav>
+
+              <div className="p-4 border-t border-white/5">
+                <div className="bg-zinc-950 rounded-xl p-4 border border-white/5 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+                    {user.name.charAt(0)}
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <div className="text-sm font-bold truncate">{user.name}</div>
+                    <div className="text-xs text-muted-foreground">{user.role_id === 1 ? 'Administrador' : 'Personal'}</div>
+                  </div>
+                </div>
+                <button onClick={handleLogout} className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium">
+                  <LogOut className="w-4 h-4" /> Cerrar Sesión
+                </button>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative pt-14 md:pt-0">
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px] pointer-events-none" />
 
-        <div className="flex-1 overflow-y-auto p-6 lg:p-10 custom-scrollbar relative z-10">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 custom-scrollbar relative z-10">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
             <div>
-              <h1 className="text-3xl font-black mb-2">
+              <h1 className="text-2xl sm:text-3xl font-black mb-2">
                 {activeTab === 'resumen' && `¡Hola, ${user.name.split(' ')[0]}! 👋`}
                 {activeTab === 'ordenes' && 'Gestión de Órdenes & Comandas'}
                 {activeTab === 'mesas' && 'Mapa Visual de Mesas en Vivo'}
@@ -1567,6 +1567,96 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function DashboardNav({ activeTab, onSelect, pendingReservations }: { activeTab: string; onSelect: (tab: string) => void; pendingReservations: number }) {
+  const tabClass = (key: string) =>
+    `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${
+      activeTab === key
+        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+        : "text-zinc-400 hover:text-white hover:bg-white/5"
+    }`;
+
+  return (
+    <>
+      <button onClick={() => onSelect("resumen")} className={tabClass("resumen")}>
+        <LayoutDashboard className="w-5 h-5" /> Resumen General
+      </button>
+
+      <button onClick={() => onSelect("ordenes")} className={tabClass("ordenes")}>
+        <ReceiptText className="w-5 h-5" /> Gestión de Órdenes
+      </button>
+
+      <button onClick={() => onSelect("mesas")} className={tabClass("mesas")}>
+        <Grid3X3 className="w-5 h-5" /> Mapa de Mesas
+      </button>
+
+      <button
+        onClick={() => onSelect("reservas")}
+        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm ${
+          activeTab === "reservas"
+            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+            : "text-zinc-400 hover:text-white hover:bg-white/5"
+        }`}
+      >
+        <span className="flex items-center gap-3">
+          <CalendarCheck className="w-5 h-5" /> Reservaciones
+        </span>
+        {pendingReservations > 0 && (
+          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+            activeTab === 'reservas' ? 'bg-black/25 text-white' : 'bg-amber-500/20 text-amber-400'
+          }`}>
+            {pendingReservations}
+          </span>
+        )}
+      </button>
+
+      <Link
+        href="/caja"
+        onClick={() => onSelect("caja")}
+        className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20"
+      >
+        <span className="flex items-center gap-3">
+          <Receipt className="w-5 h-5" /> Punto de Caja
+        </span>
+        <span className="text-xs bg-emerald-500/20 px-2 py-0.5 rounded-full font-bold">POS</span>
+      </Link>
+
+      <Link
+        href="/facturacion"
+        onClick={() => onSelect("facturacion")}
+        className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm text-amber-400 hover:bg-amber-500/10 border border-amber-500/20"
+      >
+        <span className="flex items-center gap-3">
+          <ReceiptText className="w-5 h-5" /> Facturación
+        </span>
+        <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded-full font-bold">SUNAT</span>
+      </Link>
+
+      <Link
+        href="/menu-diario"
+        onClick={() => onSelect("menu-diario")}
+        className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm text-amber-300 hover:bg-amber-500/10 border border-amber-500/20"
+      >
+        <span className="flex items-center gap-3">
+          <Calendar className="w-5 h-5" /> Menú del Día
+        </span>
+        <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded-full font-bold">S/ 10</span>
+      </Link>
+
+      <button onClick={() => onSelect("menu")} className={tabClass("menu")}>
+        <BookOpen className="w-5 h-5" /> Carta & Menú
+      </button>
+
+      <button onClick={() => onSelect("personal")} className={tabClass("personal")}>
+        <Users className="w-5 h-5" /> Personal
+      </button>
+
+      <button onClick={() => onSelect("configuracion")} className={tabClass("configuracion")}>
+        <Settings className="w-5 h-5" /> Configuración
+      </button>
+    </>
   );
 }
 
