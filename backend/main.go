@@ -39,12 +39,12 @@ func corsOrigins() []string {
 	return origenes
 }
 
-// tokenTTL lee la duración del token desde JWT_EXPIRATION_HOURS (por defecto 12h).
+// tokenTTL lee la duración del token desde JWT_EXPIRATION_HOURS (por defecto 30 días).
 func tokenTTL() time.Duration {
 	if h, err := strconv.Atoi(os.Getenv("JWT_EXPIRATION_HOURS")); err == nil && h > 0 {
 		return time.Duration(h) * time.Hour
 	}
-	return 12 * time.Hour
+	return 720 * time.Hour
 }
 
 func jsonError(c *fiber.Ctx) error {

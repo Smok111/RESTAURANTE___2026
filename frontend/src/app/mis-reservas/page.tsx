@@ -216,9 +216,14 @@ export default function MisReservas() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <nav className="sticky top-0 z-40 border-b border-white/5 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
-          <Link href="/" className="flex items-center">
-            <Logo size={44} />
+        <div className="max-w-5xl mx-auto px-3 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-3">
+          <Link href="/" className="flex items-center shrink-0" aria-label="Sabor Chugurano - Inicio">
+            <span className="sm:hidden">
+              <Logo size={40} variant="badge" />
+            </span>
+            <span className="hidden sm:flex">
+              <Logo size={44} />
+            </span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
