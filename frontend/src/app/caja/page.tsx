@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import { DetalleVenta, Venta, obtenerVentas, registrarVenta } from "@/lib/facturacion";
+import { DetalleVenta, Venta, crearCliente, obtenerVentas, registrarVenta } from "@/lib/facturacion";
 import { consultarDNI, consultarRUC } from "@/lib/reniecRuc";
 
 
@@ -65,6 +65,8 @@ type TicketCajaData = {
   tipo: ComprobanteTipo;
   clienteNombre: string;
   clienteDocumento: string;
+  clienteDireccion?: string;
+  clienteTelefono?: string;
   serie: string;
   numero: string;
 };
@@ -98,6 +100,8 @@ function BoletaTicket({ data }: { data: TicketCajaData }) {
       <div className="text-[10px] space-y-0.5 border-b pb-3 border-dashed border-zinc-400">
         <div>CLIENTE: {data.clienteNombre}</div>
         <div>{data.tipo === "factura" ? "RUC" : "DNI"}: {data.clienteDocumento}</div>
+        {data.clienteDireccion && <div>DIR: {data.clienteDireccion}</div>}
+        {data.clienteTelefono && <div>TEL: {data.clienteTelefono}</div>}
         {(data.tipo === "boleta" || data.tipo === "factura") && data.order.table_number ? (
           <div>ATENDIDO EN: Mesa {data.order.table_number}</div>
         ) : null}
@@ -184,6 +188,8 @@ export default function CajaPage() {
   const [comprobanteTipo, setComprobanteTipo] = useState<ComprobanteTipo>("simple");
   const [docNumero, setDocNumero] = useState("");
   const [nombreCliente, setNombreCliente] = useState("");
+  const [direccionCliente, setDireccionCliente] = useState("");
+  const [telefonoCliente, setTelefonoCliente] = useState("");
   const [consultandoDoc, setConsultandoDoc] = useState(false);
   const [errorDoc, setErrorDoc] = useState<string | null>(null);
 
@@ -247,6 +253,8 @@ export default function CajaPage() {
     setComprobanteTipo("simple");
     setDocNumero("");
     setNombreCliente("");
+    setDireccionCliente("");
+    setTelefonoCliente("");
     setErrorDoc(null);
 
     try {
@@ -285,6 +293,7 @@ export default function CajaPage() {
       if (esFactura) {
         const data = await consultarRUC(doc);
         setNombreCliente(data.razonSocial);
+        if (data.direccion) setDireccionCliente(data.direccion);
       } else {
         const data = await consultarDNI(doc);
         setNombreCliente(data.nombreCompleto);
@@ -347,6 +356,8 @@ export default function CajaPage() {
         const igv = Number((total - subtotal).toFixed(2));
         const clienteNombreFinal = comprobanteTipo === "simple" ? "CLIENTES VARIOS" : nombreCliente.trim();
         const clienteDocumentoFinal = comprobanteTipo === "simple" ? "00000000" : doc;
+        const direccionFinal = comprobanteTipo === "simple" ? "" : direccionCliente.trim();
+        const telefonoFinal = comprobanteTipo === "simple" ? "" : telefonoCliente.trim();
         const serie = esFactura ? "F001" : "B001";
         let numero = "000000";
 
@@ -379,7 +390,7 @@ export default function CajaPage() {
             cliente_id: 0,
             cliente_nombre: clienteNombreFinal,
             cliente_documento: clienteDocumentoFinal,
-            direccion: "",
+            direccion: direccionFinal,
             productos: itemsVenta,
             subtotal,
             igv,
@@ -389,6 +400,20 @@ export default function CajaPage() {
             estado: "Emitida",
           };
           await registrarVenta(venta);
+
+          if (comprobanteTipo !== "simple" && clienteDocumentoFinal) {
+            try {
+              await crearCliente({
+                nombre: clienteNombreFinal,
+                dni: esFactura ? undefined : clienteDocumentoFinal,
+                ruc: esFactura ? clienteDocumentoFinal : undefined,
+                direccion: direccionFinal || undefined,
+                telefono: telefonoFinal || undefined,
+              });
+            } catch {
+              // El cliente ya existía: no bloquea la emisión
+            }
+          }
         } catch (err) {
           console.error(err);
           alert("El pago se registró, pero no se pudo emitir el comprobante. Puedes emitirlo desde Facturación.");
@@ -404,6 +429,8 @@ export default function CajaPage() {
           tipo: comprobanteTipo,
           clienteNombre: clienteNombreFinal,
           clienteDocumento: clienteDocumentoFinal,
+          clienteDireccion: direccionFinal || undefined,
+          clienteTelefono: telefonoFinal || undefined,
           serie,
           numero,
         });
@@ -820,6 +847,7 @@ export default function CajaPage() {
                   </div>
 
                   {comprobanteTipo !== "simple" && (
+                    <>
                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
@@ -866,6 +894,34 @@ export default function CajaPage() {
                         />
                       </div>
                     </div>
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
+                          Dirección <span className="font-normal text-zinc-500">(opcional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={direccionCliente}
+                          onChange={(e) => setDireccionCliente(e.target.value)}
+                          placeholder="Av. / Jr. / Calle"
+                          className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2.5 px-3 text-white focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
+                          Teléfono / WhatsApp <span className="font-normal text-zinc-500">(opcional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="tel"
+                          value={telefonoCliente}
+                          onChange={(e) => setTelefonoCliente(e.target.value)}
+                          placeholder="999-999-999"
+                          className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2.5 px-3 text-white focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                    </>
                   )}
                   {comprobanteTipo === "simple" && (
                     <p className="mt-2 text-xs text-zinc-500">
