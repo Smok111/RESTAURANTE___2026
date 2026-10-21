@@ -591,7 +591,7 @@ export default function Home() {
                       key={seg.name}
                       type="button"
                       onClick={() => setSelectedSegundo(seg.name)}
-                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between h-24 ${
+                      className={`min-w-0 overflow-hidden p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 min-h-24 ${
                         selectedSegundo === seg.name
                           ? "bg-amber-500/20 border-amber-500 text-white shadow-md shadow-amber-500/20"
                           : "bg-zinc-950/70 border-white/10 text-zinc-400 hover:text-white hover:border-white/20"
@@ -603,9 +603,9 @@ export default function Home() {
                           <span className="w-4 h-4 rounded-full bg-amber-500 text-black flex items-center justify-center text-[10px]">✓</span>
                         )}
                       </div>
-                      <div>
-                        <div className="text-white font-extrabold">{seg.name}</div>
-                        <div className="text-[10px] text-zinc-400 truncate">{seg.desc}</div>
+                      <div className="min-w-0">
+                        <div className="text-white font-extrabold leading-tight break-words">{seg.name}</div>
+                        <div className="text-[10px] text-zinc-400 leading-snug line-clamp-2 break-words">{seg.desc}</div>
                       </div>
                     </button>
                   ))}
