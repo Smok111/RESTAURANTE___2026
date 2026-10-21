@@ -99,7 +99,7 @@ export default function AdminPage() {
     try {
       const res = await apiFetch("/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-User-Role": "Administrador" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(nuevoUsuario),
       });
       if (res.ok) {
@@ -118,7 +118,6 @@ export default function AdminPage() {
     try {
       const res = await apiFetch(`/users/${id}`, {
         method: "DELETE",
-        headers: { "X-User-Role": "Administrador" },
       });
       if (res.ok) cargarDatos();
     } catch {
@@ -134,7 +133,7 @@ export default function AdminPage() {
     try {
       const res = await apiFetch("/menu", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-User-Role": "Administrador" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: nuevoProducto.name,
           price: nuevoProducto.price,
@@ -160,7 +159,6 @@ export default function AdminPage() {
     try {
       const res = await apiFetch(`/menu/${id}`, {
         method: "DELETE",
-        headers: { "X-User-Role": "Administrador" },
       });
       if (res.ok) cargarDatos();
     } catch {
@@ -175,7 +173,7 @@ export default function AdminPage() {
     try {
       const res = await apiFetch("/categories", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-User-Role": "Administrador" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: nuevaCategoria.name.trim() }),
       });
       if (res.ok) {
@@ -194,7 +192,7 @@ export default function AdminPage() {
     try {
       const res = await apiFetch(`/categories/${categoriaEditando.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "X-User-Role": "Administrador" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: categoriaEditando.name.trim() }),
       });
       if (res.ok) {
@@ -213,7 +211,6 @@ export default function AdminPage() {
     try {
       const res = await apiFetch(`/categories/${id}`, {
         method: "DELETE",
-        headers: { "X-User-Role": "Administrador" },
       });
       if (res.ok) cargarDatos();
     } catch {

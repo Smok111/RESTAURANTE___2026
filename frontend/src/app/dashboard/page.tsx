@@ -2,7 +2,7 @@
 
 import { apiFetch } from "@/lib/api";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   UtensilsCrossed,
@@ -32,8 +32,17 @@ import {
   MessageSquare,
   Image as ImageIcon,
   Upload,
-  Menu
+  Menu,
+  Power,
+  QrCode,
+  Download,
+  Copy,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react";
+
+import { QRCodeCanvas } from "qrcode.react";
+
 
 
 import Link from "next/link";
@@ -115,6 +124,14 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("resumen");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const dishFormRef = useRef<HTMLDivElement | null>(null);
+
+  // Código QR de la carta pública
+  const [showQr, setShowQr] = useState(false);
+  const [qrCopied, setQrCopied] = useState(false);
+  const [menuUrl, setMenuUrl] = useState("");
+
 
   // Modal para ver detalle de orden (Item 4)
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<Order | null>(null);
@@ -291,7 +308,7 @@ export default function Dashboard() {
     e.preventDefault();
     try {
       const payload = {
-        name: dishForm.name,
+        name: dishForm.name.trim(),
         description: dishForm.description,
         price: parseFloat(dishForm.price) || 0,
         category_id: Number(dishForm.category_id),
@@ -299,28 +316,39 @@ export default function Dashboard() {
         is_available: dishForm.is_available
       };
 
-      if (editingDish) {
-        await apiFetch(`/menu/${editingDish.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json", "X-User-Role": "1" },
-          body: JSON.stringify(payload)
-        });
-      } else {
-        await apiFetch("/menu", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-User-Role": "1" },
-          body: JSON.stringify(payload)
-        });
+      const res = editingDish
+        ? await apiFetch(`/menu/${editingDish.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          })
+        : await apiFetch("/menu", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+      if (!res.ok) {
+        let message = "No se pudo guardar el plato.";
+        try {
+          const data = await res.json();
+          message = data.error || data.message || message;
+        } catch {
+          /* respuesta sin cuerpo */
+        }
+        throw new Error(message);
       }
 
       setShowAddDish(false);
       setEditingDish(null);
-      setDishForm({ name: "", description: "", price: "", category_id: 1, image_url: "", is_available: true });
-      fetchMenu();
+      setDishForm({ name: "", description: "", price: "", category_id: categories[0]?.id ?? 1, image_url: "", is_available: true });
+      await fetchMenu();
     } catch (err) {
       console.error(err);
+      alert(err instanceof Error ? err.message : "Error de conexión al guardar el plato.");
     }
   };
+
 
   const handleDishImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -350,25 +378,29 @@ export default function Dashboard() {
     }
   };
 
-  const toggleDishAvailability = async (id: number) => {
+  const toggleDishAvailability = async (id: number, current: boolean) => {
     try {
-      await apiFetch(`/menu/${id}/toggle`, { method: "PATCH" });
-      fetchMenu();
+      // Actualización optimista para que el cambio se vea al instante
+      setMenuItems(prev => prev.map(d => (d.id === id ? { ...d, is_available: !current } : d)));
+      const res = await apiFetch(`/menu/${id}/toggle`, { method: "PATCH" });
+      if (!res.ok) throw new Error("No se pudo cambiar la disponibilidad del plato.");
+      await fetchMenu();
     } catch (err) {
       console.error(err);
+      await fetchMenu();
+      alert(err instanceof Error ? err.message : "Error de conexión.");
     }
   };
 
   const deleteDish = async (id: number) => {
     if (!confirm("¿Eliminar este plato de la carta?")) return;
     try {
-      await apiFetch(`/menu/${id}`, {
-        method: "DELETE",
-        headers: { "X-User-Role": "1" }
-      });
+      const res = await apiFetch(`/menu/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("No se pudo eliminar el plato.");
       fetchMenu();
     } catch (err) {
       console.error(err);
+      alert(err instanceof Error ? err.message : "Error de conexión.");
     }
   };
 
@@ -383,27 +415,28 @@ export default function Dashboard() {
       is_available: dish.is_available
     });
     setShowAddDish(true);
+    // Lleva al formulario para no tener que subir manualmente hasta arriba
+    setTimeout(() => dishFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
   };
 
   const deleteStaff = async (id: number) => {
     if (!confirm("¿Estás seguro de eliminar este usuario?")) return;
     try {
-      await apiFetch(`/users/${id}`, {
-        method: "DELETE",
-        headers: { "X-User-Role": "1" }
-      });
+      const res = await apiFetch(`/users/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("No se pudo eliminar el usuario.");
       fetchStaff();
     } catch (err) {
       console.error(err);
+      alert(err instanceof Error ? err.message : "Error de conexión.");
     }
   };
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await apiFetch("/users", {
+      const res = await apiFetch("/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-User-Role": "1" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: newStaff.name,
           email: newStaff.email,
@@ -411,13 +444,16 @@ export default function Dashboard() {
           role_id: Number(newStaff.role_id)
         })
       });
+      if (!res.ok) throw new Error("No se pudo crear el usuario.");
       setNewStaff({ name: "", email: "", password: "", role_id: 2 });
       setShowAddStaff(false);
       fetchStaff();
     } catch (err) {
       console.error(err);
+      alert(err instanceof Error ? err.message : "Error de conexión.");
     }
   };
+
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -431,6 +467,32 @@ export default function Dashboard() {
 
   const pendingReservations = reservations.filter(r => r.status === 'Pendiente').length;
 
+  const openQr = () => {
+    setMenuUrl(`${window.location.origin}/#menu`);
+    setQrCopied(false);
+    setShowQr(true);
+  };
+
+  const copyMenuUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(menuUrl);
+      setQrCopied(true);
+      setTimeout(() => setQrCopied(false), 2000);
+    } catch {
+      alert("No se pudo copiar el enlace.");
+    }
+  };
+
+  const downloadQr = () => {
+    const canvas = document.getElementById("menu-qr-canvas") as HTMLCanvasElement | null;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = "sabor-chugurano-menu-qr.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
+
+
   if (!user) return null;
 
   // Métricas
@@ -443,37 +505,68 @@ export default function Dashboard() {
     <div className="min-h-screen bg-zinc-950 text-foreground flex overflow-hidden">
 
       {/* Sidebar */}
-      <aside className="w-64 bg-zinc-900/50 border-r border-white/5 flex flex-col hidden md:flex">
-        <div className="p-6 border-b border-white/5">
-          <Link href="/" className="flex items-center gap-3 group">
-            <Logo size={38} showText={false} />
-            <div>
-              <div className="font-black tracking-wider text-sm text-white group-hover:text-amber-400 transition-colors">Sabor Chugurano</div>
-              <div className="text-[10px] text-amber-400 font-bold tracking-widest uppercase">Panel Integral</div>
-            </div>
-          </Link>
-
+      <aside className={`${sidebarCollapsed ? "w-20" : "w-64"} shrink-0 bg-zinc-900/50 border-r border-white/5 flex-col hidden md:flex transition-[width] duration-300 ease-in-out`}>
+        <div className={`border-b border-white/5 ${sidebarCollapsed ? "p-3 flex flex-col items-center gap-3" : "p-6"}`}>
+          <div className={`flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between gap-2"}`}>
+            <Link href="/" className="flex items-center gap-3 group min-w-0">
+              <Logo size={38} showText={false} />
+              {!sidebarCollapsed && (
+                <div className="min-w-0">
+                  <div className="font-black tracking-wider text-sm text-white group-hover:text-amber-400 transition-colors truncate">Sabor Chugurano</div>
+                  <div className="text-[10px] text-amber-400 font-bold tracking-widest uppercase">Panel Integral</div>
+                </div>
+              )}
+            </Link>
+            {!sidebarCollapsed && (
+              <button
+                onClick={() => setSidebarCollapsed(true)}
+                className="p-1.5 text-zinc-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors shrink-0"
+                title="Ocultar menú"
+                aria-label="Ocultar menú lateral"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {sidebarCollapsed && (
+            <button
+              onClick={() => setSidebarCollapsed(false)}
+              className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              title="Mostrar menú"
+              aria-label="Mostrar menú lateral"
+            >
+              <PanelLeftOpen className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
-        <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto custom-scrollbar">
-          <DashboardNav activeTab={activeTab} onSelect={handleNavSelect} pendingReservations={pendingReservations} />
+        <nav className={`flex-1 ${sidebarCollapsed ? "p-2" : "p-4"} space-y-1.5 overflow-y-auto overflow-x-hidden custom-scrollbar`}>
+          <DashboardNav activeTab={activeTab} onSelect={handleNavSelect} pendingReservations={pendingReservations} collapsed={sidebarCollapsed} />
         </nav>
 
-        <div className="p-4 border-t border-white/5">
-          <div className="bg-zinc-900 rounded-xl p-4 border border-white/5 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
+        <div className={`border-t border-white/5 ${sidebarCollapsed ? "p-2" : "p-4"}`}>
+          <div className={`bg-zinc-900 rounded-xl border border-white/5 flex items-center ${sidebarCollapsed ? "justify-center p-2" : "p-4 gap-3"}`}>
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold shrink-0">
               {user.name.charAt(0)}
             </div>
-            <div className="flex-1 overflow-hidden">
-              <div className="text-sm font-bold truncate">{user.name}</div>
-              <div className="text-xs text-muted-foreground">{user.role_id === 1 ? 'Administrador' : 'Personal'}</div>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="flex-1 overflow-hidden">
+                <div className="text-sm font-bold truncate">{user.name}</div>
+                <div className="text-xs text-muted-foreground">{user.role_id === 1 ? 'Administrador' : 'Personal'}</div>
+              </div>
+            )}
           </div>
-          <button onClick={handleLogout} className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium">
-            <LogOut className="w-4 h-4" /> Cerrar Sesión
+          <button
+            onClick={handleLogout}
+            className={`mt-3 w-full flex items-center justify-center gap-2 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors text-sm font-medium ${sidebarCollapsed ? "p-2.5" : "px-4 py-2.5"}`}
+            title="Cerrar sesión"
+          >
+            <LogOut className="w-4 h-4" />
+            {!sidebarCollapsed && <span>Cerrar Sesión</span>}
           </button>
         </div>
       </aside>
+
 
       {/* Mobile Top Bar */}
       <header className="md:hidden fixed top-0 inset-x-0 z-40 bg-zinc-950/90 backdrop-blur-xl border-b border-white/5">
@@ -558,6 +651,67 @@ export default function Dashboard() {
         )}
       </AnimatePresence>
 
+      {/* MODAL CÓDIGO QR DE LA CARTA PÚBLICA */}
+      <AnimatePresence>
+        {showQr && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-900 border border-white/10 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
+            >
+              <div className="p-5 border-b border-white/10 flex justify-between items-center bg-zinc-950/60">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <QrCode className="w-5 h-5 text-primary" /> QR de la Carta
+                </h3>
+                <button
+                  onClick={() => setShowQr(false)}
+                  className="p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-white/10 transition-colors"
+                  aria-label="Cerrar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 flex flex-col items-center gap-4">
+                <div className="bg-white p-4 rounded-2xl shadow-lg">
+                  <QRCodeCanvas
+                    id="menu-qr-canvas"
+                    value={menuUrl || "https://sabor-chugurano.vercel.app/#menu"}
+                    size={232}
+                    level="H"
+                    includeMargin
+                  />
+                </div>
+                <p className="text-xs text-zinc-400 text-center">
+                  El cliente escanea este código y se abre la carta digital actualizada.
+                </p>
+
+                <div className="w-full bg-zinc-950 border border-white/10 rounded-xl px-3 py-2 text-[11px] text-zinc-400 font-mono truncate text-center">
+                  {menuUrl}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 w-full">
+                  <button
+                    onClick={copyMenuUrl}
+                    className="flex items-center justify-center gap-2 px-3 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-bold transition-colors"
+                  >
+                    <Copy className="w-4 h-4" /> {qrCopied ? "¡Copiado!" : "Copiar enlace"}
+                  </button>
+                  <button
+                    onClick={downloadQr}
+                    className="flex items-center justify-center gap-2 px-3 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-xs font-bold transition-colors"
+                  >
+                    <Download className="w-4 h-4" /> Descargar PNG
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative pt-14 md:pt-0">
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px] pointer-events-none" />
@@ -596,9 +750,19 @@ export default function Dashboard() {
 
               {activeTab === 'menu' && (
                 <button
+                  onClick={openQr}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 rounded-xl transition-all text-xs font-bold text-zinc-200"
+                  title="Generar código QR de la carta"
+                >
+                  <QrCode className="w-4 h-4 text-primary" /> Código QR
+                </button>
+              )}
+
+              {activeTab === 'menu' && (
+                <button
                   onClick={() => {
                     setEditingDish(null);
-                    setDishForm({ name: "", description: "", price: "", category_id: 1, image_url: "", is_available: true });
+                    setDishForm({ name: "", description: "", price: "", category_id: categories[0]?.id ?? 1, image_url: "", is_available: true });
                     setShowAddDish(true);
                   }}
                   className="flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all text-xs font-bold shadow-lg shadow-primary/20"
@@ -606,6 +770,7 @@ export default function Dashboard() {
                   <Plus className="w-4 h-4" /> Nuevo Plato
                 </button>
               )}
+
 
               {activeTab === 'personal' && (
                 <button
@@ -911,10 +1076,11 @@ export default function Dashboard() {
               <AnimatePresence>
                 {showAddDish && (
                   <motion.div
+                    ref={dishFormRef}
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="bg-zinc-900/80 border border-white/10 rounded-3xl p-6 backdrop-blur-md overflow-hidden"
+                    className="bg-zinc-900/80 border border-white/10 rounded-3xl p-6 backdrop-blur-md overflow-hidden scroll-mt-4"
                   >
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-lg font-bold">
@@ -1135,19 +1301,26 @@ export default function Dashboard() {
                               S/ {dish.price.toFixed(2)}
                             </td>
                             <td className="py-4 px-4">
-                              <button
-                                onClick={() => toggleDishAvailability(dish.id)}
-                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${dish.is_available
-                                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"
-                                    : "bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20"
-                                  }`}
-                                title="Clic para cambiar disponibilidad"
-                              >
+                              <span className={`px-3 py-1 rounded-full text-xs font-bold border ${dish.is_available
+                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                  : "bg-red-500/10 text-red-400 border-red-500/30"
+                                }`}>
                                 {dish.is_available ? "✓ Disponible" : "✕ Agotado"}
-                              </button>
+                              </span>
                             </td>
                             <td className="py-4 px-4 text-right">
-                              <div className="inline-flex gap-2">
+                              <div className="inline-flex items-center gap-2">
+                                <button
+                                  onClick={() => toggleDishAvailability(dish.id, dish.is_available)}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors inline-flex items-center gap-1.5 ${dish.is_available
+                                      ? "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20"
+                                      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
+                                    }`}
+                                  title={dish.is_available ? "Marcar como agotado" : "Marcar como disponible"}
+                                >
+                                  <Power className="w-3.5 h-3.5" />
+                                  {dish.is_available ? "Agotar" : "Disponible"}
+                                </button>
                                 <button
                                   onClick={() => startEditDish(dish)}
                                   className="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
@@ -1164,6 +1337,7 @@ export default function Dashboard() {
                                 </button>
                               </div>
                             </td>
+
                           </tr>
                         );
                       })}
@@ -1570,9 +1744,11 @@ export default function Dashboard() {
   );
 }
 
-function DashboardNav({ activeTab, onSelect, pendingReservations }: { activeTab: string; onSelect: (tab: string) => void; pendingReservations: number }) {
+function DashboardNav({ activeTab, onSelect, pendingReservations, collapsed = false }: { activeTab: string; onSelect: (tab: string) => void; pendingReservations: number; collapsed?: boolean }) {
   const tabClass = (key: string) =>
-    `w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${
+    `w-full flex items-center rounded-xl transition-all font-medium text-sm ${
+      collapsed ? "justify-center px-2 py-3" : "gap-3 px-4 py-3"
+    } ${
       activeTab === key
         ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
         : "text-zinc-400 hover:text-white hover:bg-white/5"
@@ -1580,30 +1756,33 @@ function DashboardNav({ activeTab, onSelect, pendingReservations }: { activeTab:
 
   return (
     <>
-      <button onClick={() => onSelect("resumen")} className={tabClass("resumen")}>
-        <LayoutDashboard className="w-5 h-5" /> Resumen General
+      <button onClick={() => onSelect("resumen")} className={tabClass("resumen")} title="Resumen General">
+        <LayoutDashboard className="w-5 h-5 shrink-0" /> {!collapsed && "Resumen General"}
       </button>
 
-      <button onClick={() => onSelect("ordenes")} className={tabClass("ordenes")}>
-        <ReceiptText className="w-5 h-5" /> Gestión de Órdenes
+      <button onClick={() => onSelect("ordenes")} className={tabClass("ordenes")} title="Gestión de Órdenes">
+        <ReceiptText className="w-5 h-5 shrink-0" /> {!collapsed && "Gestión de Órdenes"}
       </button>
 
-      <button onClick={() => onSelect("mesas")} className={tabClass("mesas")}>
-        <Grid3X3 className="w-5 h-5" /> Mapa de Mesas
+      <button onClick={() => onSelect("mesas")} className={tabClass("mesas")} title="Mapa de Mesas">
+        <Grid3X3 className="w-5 h-5 shrink-0" /> {!collapsed && "Mapa de Mesas"}
       </button>
 
       <button
         onClick={() => onSelect("reservas")}
-        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm ${
+        className={`w-full flex items-center rounded-xl transition-all font-medium text-sm ${
+          collapsed ? "justify-center px-2 py-3" : "justify-between px-4 py-3"
+        } ${
           activeTab === "reservas"
             ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
             : "text-zinc-400 hover:text-white hover:bg-white/5"
         }`}
+        title="Reservaciones"
       >
-        <span className="flex items-center gap-3">
-          <CalendarCheck className="w-5 h-5" /> Reservaciones
+        <span className={`flex items-center ${collapsed ? "" : "gap-3"}`}>
+          <CalendarCheck className="w-5 h-5 shrink-0" /> {!collapsed && "Reservaciones"}
         </span>
-        {pendingReservations > 0 && (
+        {!collapsed && pendingReservations > 0 && (
           <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
             activeTab === 'reservas' ? 'bg-black/25 text-white' : 'bg-amber-500/20 text-amber-400'
           }`}>
@@ -1615,46 +1794,55 @@ function DashboardNav({ activeTab, onSelect, pendingReservations }: { activeTab:
       <Link
         href="/caja"
         onClick={() => onSelect("caja")}
-        className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20"
+        title="Punto de Caja"
+        className={`w-full flex items-center rounded-xl transition-all font-medium text-sm text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20 ${
+          collapsed ? "justify-center px-2 py-3" : "justify-between px-4 py-3"
+        }`}
       >
-        <span className="flex items-center gap-3">
-          <Receipt className="w-5 h-5" /> Punto de Caja
+        <span className={`flex items-center ${collapsed ? "" : "gap-3"}`}>
+          <Receipt className="w-5 h-5 shrink-0" /> {!collapsed && "Punto de Caja"}
         </span>
-        <span className="text-xs bg-emerald-500/20 px-2 py-0.5 rounded-full font-bold">POS</span>
+        {!collapsed && <span className="text-xs bg-emerald-500/20 px-2 py-0.5 rounded-full font-bold">POS</span>}
       </Link>
 
       <Link
         href="/facturacion"
         onClick={() => onSelect("facturacion")}
-        className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm text-amber-400 hover:bg-amber-500/10 border border-amber-500/20"
+        title="Facturación"
+        className={`w-full flex items-center rounded-xl transition-all font-medium text-sm text-amber-400 hover:bg-amber-500/10 border border-amber-500/20 ${
+          collapsed ? "justify-center px-2 py-3" : "justify-between px-4 py-3"
+        }`}
       >
-        <span className="flex items-center gap-3">
-          <ReceiptText className="w-5 h-5" /> Facturación
+        <span className={`flex items-center ${collapsed ? "" : "gap-3"}`}>
+          <ReceiptText className="w-5 h-5 shrink-0" /> {!collapsed && "Facturación"}
         </span>
-        <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded-full font-bold">SUNAT</span>
+        {!collapsed && <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded-full font-bold">SUNAT</span>}
       </Link>
 
       <Link
         href="/menu-diario"
         onClick={() => onSelect("menu-diario")}
-        className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-sm text-amber-300 hover:bg-amber-500/10 border border-amber-500/20"
+        title="Menú del Día"
+        className={`w-full flex items-center rounded-xl transition-all font-medium text-sm text-amber-300 hover:bg-amber-500/10 border border-amber-500/20 ${
+          collapsed ? "justify-center px-2 py-3" : "justify-between px-4 py-3"
+        }`}
       >
-        <span className="flex items-center gap-3">
-          <Calendar className="w-5 h-5" /> Menú del Día
+        <span className={`flex items-center ${collapsed ? "" : "gap-3"}`}>
+          <Calendar className="w-5 h-5 shrink-0" /> {!collapsed && "Menú del Día"}
         </span>
-        <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded-full font-bold">S/ 10</span>
+        {!collapsed && <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded-full font-bold">S/ 10</span>}
       </Link>
 
-      <button onClick={() => onSelect("menu")} className={tabClass("menu")}>
-        <BookOpen className="w-5 h-5" /> Carta & Menú
+      <button onClick={() => onSelect("menu")} className={tabClass("menu")} title="Carta & Menú">
+        <BookOpen className="w-5 h-5 shrink-0" /> {!collapsed && "Carta & Menú"}
       </button>
 
-      <button onClick={() => onSelect("personal")} className={tabClass("personal")}>
-        <Users className="w-5 h-5" /> Personal
+      <button onClick={() => onSelect("personal")} className={tabClass("personal")} title="Personal">
+        <Users className="w-5 h-5 shrink-0" /> {!collapsed && "Personal"}
       </button>
 
-      <button onClick={() => onSelect("configuracion")} className={tabClass("configuracion")}>
-        <Settings className="w-5 h-5" /> Configuración
+      <button onClick={() => onSelect("configuracion")} className={tabClass("configuracion")} title="Configuración">
+        <Settings className="w-5 h-5 shrink-0" /> {!collapsed && "Configuración"}
       </button>
     </>
   );
