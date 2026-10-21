@@ -38,6 +38,11 @@ import { consultarDNI, consultarRUC } from "@/lib/reniecRuc";
 
 type TabType = "emitir" | "historial" | "clientes";
 
+type PagoSplit = {
+  method: "Efectivo" | "Yape" | "Plin" | "Tarjeta" | "Transferencia";
+  amount: string;
+};
+
 type TicketData = {
   tipoComprobante: "boleta" | "factura";
   serie: string;
@@ -51,6 +56,9 @@ type TicketData = {
   subtotal: number;
   igv: number;
   total: number;
+  pagos?: { method: string; amount: number }[];
+  cashGiven?: number;
+  change?: number;
 };
 
 function TicketComprobante({ data }: { data: TicketData }) {
@@ -84,6 +92,22 @@ function TicketComprobante({ data }: { data: TicketData }) {
           <div>{data.tipoComprobante === "boleta" ? "DNI" : "RUC"}: {data.clienteDocumento || "-"}</div>
           {data.clienteDireccion && <div>DIR: {data.clienteDireccion}</div>}
           <div>FORMA PAGO: {data.metodoPago}</div>
+          {data.pagos && data.pagos.length > 1 && (
+            <div className="pl-2 text-[9px] text-zinc-600 space-y-0.5">
+              {data.pagos.map((p, i) => (
+                <div key={i} className="flex justify-between">
+                  <span>- {p.method}:</span>
+                  <span>S/ {p.amount.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {data.cashGiven !== undefined && (
+            <>
+              <div>EFECTIVO RECIBIDO: S/ {data.cashGiven.toFixed(2)}</div>
+              <div>VUELTO: S/ {(data.change || 0).toFixed(2)}</div>
+            </>
+          )}
         </div>
       </div>
 
@@ -154,7 +178,10 @@ export default function FacturacionPage() {
   const [items, setItems] = useState<DetalleVenta[]>([
     { producto_id: 1, nombre: "Menú del Día (Inc. Entrada)", cantidad: 1, precio_unitario: 10.0, subtotal: 10.0 }
   ]);
-  const [metodoPago, setMetodoPago] = useState<Venta["metodo_pago"]>("Efectivo");
+
+  // Pago simple o híbrido (varios métodos con montos)
+  const [pagos, setPagos] = useState<PagoSplit[]>([{ method: "Efectivo", amount: "" }]);
+  const [cashGiven, setCashGiven] = useState<string>("");
 
   // Estado para visualización / impresión
   const [comprobanteSeleccionado, setComprobanteSeleccionado] = useState<Venta | null>(null);
@@ -308,6 +335,55 @@ export default function FacturacionPage() {
   const subtotalCalculado = Number((totalCalculado / 1.18).toFixed(2));
   const igvCalculado = Number((totalCalculado - subtotalCalculado).toFixed(2));
 
+  // Totales del pago (simple o híbrido)
+  const pagosValidos = pagos
+    .map((p) => ({ method: p.method, amount: Number(p.amount) || 0 }))
+    .filter((p) => p.amount > 0);
+  const totalPagado = pagosValidos.reduce((acc, p) => acc + p.amount, 0);
+  const falta = Math.max(0, totalCalculado - totalPagado);
+  const excede = Math.max(0, totalPagado - totalCalculado);
+  const efectivoAplicado = pagosValidos
+    .filter((p) => p.method === "Efectivo")
+    .reduce((acc, p) => acc + p.amount, 0);
+  const parsedCash = parseFloat(cashGiven) || 0;
+  const vuelto = Math.max(0, parsedCash - efectivoAplicado);
+  const metodosResumen = Array.from(new Set(pagosValidos.map((p) => p.method))).join(" + ");
+  const metodoPagoVenta: Venta["metodo_pago"] =
+    pagosValidos.length > 1 ? "Mixto" : (pagosValidos[0]?.method || "Efectivo");
+
+  const updatePago = (index: number, patch: Partial<PagoSplit>) => {
+    setPagos((prev) =>
+      prev.map((p, i) => {
+        if (i !== index) return p;
+        const next = { ...p, ...patch };
+        if (next.method === "Efectivo" && (patch.amount !== undefined || patch.method !== undefined)) {
+          setCashGiven(patch.amount !== undefined ? patch.amount || "" : next.amount || "");
+        }
+        return next;
+      })
+    );
+  };
+
+  const agregarPago = () => {
+    const restante = Math.max(0, totalCalculado - totalPagado);
+    setPagos((prev) => [
+      ...prev,
+      { method: prev.some((p) => p.method === "Yape") ? "Tarjeta" : "Yape", amount: restante > 0 ? restante.toFixed(2) : "" },
+    ]);
+  };
+
+  const quitarPago = (index: number) => {
+    setPagos((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  };
+
+  const completarPago = () => {
+    if (falta <= 0) return;
+    const target = pagos.length - 1;
+    const nuevo = ((Number(pagos[target]?.amount) || 0) + falta).toFixed(2);
+    setPagos((prev) => prev.map((p, i) => (i === target ? { ...p, amount: nuevo } : p)));
+    if (pagos[target]?.method === "Efectivo") setCashGiven(nuevo);
+  };
+
   // Emitir comprobante
   const handleEmitir = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -317,6 +393,21 @@ export default function FacturacionPage() {
     }
     if (tipoComprobante === "factura" && !clienteNombre.trim()) {
       alert("Ingrese la razón social del cliente para la factura");
+      return;
+    }
+    if (pagosValidos.length === 0) {
+      alert("Ingresa al menos un monto de pago");
+      return;
+    }
+    if (Math.abs(totalPagado - totalCalculado) > 0.01) {
+      alert(
+        `Los montos deben sumar S/ ${totalCalculado.toFixed(2)}. ` +
+        (falta > 0.009 ? `Falta S/ ${falta.toFixed(2)}` : `Excede S/ ${excede.toFixed(2)}`)
+      );
+      return;
+    }
+    if (efectivoAplicado > 0 && parsedCash < efectivoAplicado) {
+      alert("El efectivo recibido es menor al monto aplicado en efectivo");
       return;
     }
 
@@ -334,7 +425,7 @@ export default function FacturacionPage() {
       subtotal: subtotalCalculado,
       igv: igvCalculado,
       total: totalCalculado,
-      metodo_pago: metodoPago,
+      metodo_pago: metodoPagoVenta,
       fecha: new Date().toISOString().slice(0, 10),
       estado: "Emitida",
     };
@@ -367,6 +458,8 @@ export default function FacturacionPage() {
       setClienteDireccion("");
       setClienteTelefono("");
       setItems([{ producto_id: 1, nombre: "Menú del Día (Inc. Entrada)", cantidad: 1, precio_unitario: 10.0, subtotal: 10.0 }]);
+      setPagos([{ method: "Efectivo", amount: "" }]);
+      setCashGiven("");
       setTab("historial");
     } catch (err) {
       alert(err instanceof Error ? err.message : "No se pudo emitir el comprobante");
@@ -424,11 +517,14 @@ export default function FacturacionPage() {
     clienteNombre: clienteNombre || "CLIENTES VARIOS",
     clienteDocumento: documentoNumero || (tipoComprobante === "boleta" ? "00000000" : "20601234567"),
     clienteDireccion: clienteDireccion || undefined,
-    metodoPago,
+    metodoPago: metodosResumen || "Efectivo",
     items,
     subtotal: subtotalCalculado,
     igv: igvCalculado,
     total: totalCalculado,
+    pagos: pagosValidos,
+    cashGiven: efectivoAplicado > 0 ? parsedCash : undefined,
+    change: efectivoAplicado > 0 ? vuelto : undefined,
   };
 
   const ticketSeleccionado: TicketData | null = comprobanteSeleccionado
@@ -773,23 +869,83 @@ export default function FacturacionPage() {
                   </div>
                 </div>
 
-                {/* Método de Pago y Totales */}
+                {/* Formas de Pago (simple o híbrido) y Totales */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-zinc-800">
                   <div>
-                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-2">
-                      Método de Pago
-                    </label>
-                    <select
-                      value={metodoPago}
-                      onChange={(e) => setMetodoPago(e.target.value as any)}
-                      className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm"
-                    >
-                      <option value="Efectivo">Efectivo</option>
-                      <option value="Yape">Yape</option>
-                      <option value="Plin">Plin</option>
-                      <option value="Tarjeta">Tarjeta de Débito / Crédito</option>
-                      <option value="Transferencia">Transferencia Bancaria</option>
-                    </select>
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                        Formas de Pago
+                      </label>
+                      <button
+                        type="button"
+                        onClick={agregarPago}
+                        className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Agregar método
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {pagos.map((p, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <select
+                            value={p.method}
+                            onChange={(e) => updatePago(idx, { method: e.target.value as PagoSplit["method"] })}
+                            className="flex-1 min-w-0 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm"
+                          >
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Yape">Yape</option>
+                            <option value="Plin">Plin</option>
+                            <option value="Tarjeta">Tarjeta POS</option>
+                            <option value="Transferencia">Transferencia</option>
+                          </select>
+                          <div className="relative w-32 shrink-0">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">S/</span>
+                            <input
+                              type="number"
+                              step="0.10"
+                              min="0"
+                              value={p.amount}
+                              onChange={(e) => updatePago(idx, { amount: e.target.value })}
+                              placeholder="0.00"
+                              className="w-full px-3 py-2 pl-9 bg-zinc-900 border border-zinc-700 rounded-lg text-white font-bold text-sm"
+                            />
+                          </div>
+                          {pagos.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => quitarPago(idx)}
+                              className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg shrink-0"
+                              title="Quitar método"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
+                      <span className="text-zinc-400">Pagado: S/ {totalPagado.toFixed(2)}</span>
+                      <div className="flex items-center gap-2">
+                        {falta > 0.009 && (
+                          <button
+                            type="button"
+                            onClick={completarPago}
+                            className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-colors"
+                          >
+                            Completar
+                          </button>
+                        )}
+                        <span className={falta > 0.009 ? "text-amber-400" : excede > 0.009 ? "text-rose-400" : "text-emerald-400"}>
+                          {falta > 0.009
+                            ? `Falta: S/ ${falta.toFixed(2)}`
+                            : excede > 0.009
+                              ? `Excede: S/ ${excede.toFixed(2)}`
+                              : "Completo"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 space-y-1.5 text-sm">
@@ -806,6 +962,47 @@ export default function FacturacionPage() {
                       <span className="text-amber-400">S/ {totalCalculado.toFixed(2)}</span>
                     </div>
                   </div>
+
+                  {/* Si hay efectivo: calculadora de vuelto */}
+                  {efectivoAplicado > 0 && (
+                    <div className="md:col-span-2 bg-zinc-950/80 rounded-2xl p-4 border border-zinc-800 space-y-4">
+                      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="w-full sm:w-1/2">
+                          <label className="block text-xs font-semibold text-zinc-400 mb-1.5">Efectivo Recibido del Cliente</label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">S/</span>
+                            <input
+                              type="number"
+                              step="0.10"
+                              value={cashGiven}
+                              onChange={(e) => setCashGiven(e.target.value)}
+                              className="w-full px-3 py-2.5 pl-10 bg-zinc-900 border border-zinc-700 rounded-xl font-bold text-white focus:outline-none focus:border-amber-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="w-full sm:w-1/2 bg-zinc-900 p-3.5 rounded-xl border border-zinc-800 text-right">
+                          <div className="text-xs text-zinc-400">Vuelto a Entregar</div>
+                          <div className={`text-2xl font-black ${parsedCash >= efectivoAplicado ? "text-emerald-400" : "text-red-400"}`}>
+                            S/ {vuelto.toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-zinc-800 text-xs font-bold">
+                        <span className="text-zinc-500 self-center mr-1">Rápido:</span>
+                        {Array.from(new Set([efectivoAplicado, 20, 50, 100, 200])).map((val, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setCashGiven(val.toString())}
+                            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg border border-zinc-700 transition-colors"
+                          >
+                            {Math.abs(val - efectivoAplicado) < 0.001 ? "Exacto" : `S/ ${val}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Botón Emitir */}
@@ -1000,6 +1197,7 @@ export default function FacturacionPage() {
                       <option value="Plin">Plin</option>
                       <option value="Tarjeta">Tarjeta de Débito / Crédito</option>
                       <option value="Transferencia">Transferencia Bancaria</option>
+                      <option value="Mixto">Mixto (varios métodos)</option>
                     </select>
                   </div>
                   <div className="flex justify-end gap-2 pt-2">

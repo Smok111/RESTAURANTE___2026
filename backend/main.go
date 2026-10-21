@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -1362,7 +1363,12 @@ func getDailyMenuByFecha(c *fiber.Ctx) error {
 		FROM daily_menus WHERE fecha = $1 LIMIT 1`, fecha).
 		Scan(&id, &fechaDB, &activo, &precio, &entradasJSON, &platosJSON, &notas, &createdAt)
 	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": "No hay menú para esa fecha"})
+		// Sin menú para la fecha: se responde 200 con null para que el frontend
+		// lo trate como "sin datos" sin registrar un error en consola.
+		if err == sql.ErrNoRows {
+			return c.JSON(nil)
+		}
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(dailyMenuMapBool(id, fechaDB, activo, precio, entradasJSON, platosJSON, notas, createdAt))
 }

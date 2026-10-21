@@ -43,7 +43,7 @@ export type Venta = {
   subtotal: number;
   igv: number;
   total: number;
-  metodo_pago: "Efectivo" | "Yape" | "Plin" | "Tarjeta" | "Transferencia";
+  metodo_pago: "Efectivo" | "Yape" | "Plin" | "Tarjeta" | "Transferencia" | "Mixto";
   fecha: string;
   estado: "Emitida" | "Anulada";
 };
