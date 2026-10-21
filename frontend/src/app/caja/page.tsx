@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import { DetalleVenta, Venta, obtenerVentas, registrarVenta } from "@/lib/facturacion";
 
 
 type OrderItem = {
@@ -49,6 +50,120 @@ type Payment = {
   created_at: string;
 };
 
+type ComprobanteTipo = "simple" | "boleta" | "factura";
+
+type TicketCajaData = {
+  order: Order;
+  method: string;
+  amount: number;
+  cashGiven?: number;
+  change?: number;
+  date: string;
+  tipo: ComprobanteTipo;
+  clienteNombre: string;
+  clienteDocumento: string;
+  serie: string;
+  numero: string;
+};
+
+function BoletaTicket({ data }: { data: TicketCajaData }) {
+  const titulo =
+    data.tipo === "factura"
+      ? "FACTURA ELECTRÓNICA"
+      : data.tipo === "boleta"
+        ? "BOLETA DE VENTA ELECTRÓNICA"
+        : "BOLETA DE VENTA SIMPLE";
+
+  return (
+    <div className="bg-white text-zinc-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl p-6 font-mono text-xs flex flex-col gap-4 print:rounded-none print:shadow-none print:p-0 print:w-[72mm]">
+      <div className="text-center border-b pb-4 border-dashed border-zinc-400">
+        <div className="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden border border-zinc-300 print:w-12 print:h-12">
+          <img src="/images/logo.png" alt="Sabor Chugurano" className="w-full h-full object-cover" />
+        </div>
+        <h2 className="font-black text-lg uppercase tracking-wider">SABOR CHUGURANO</h2>
+        <p className="text-[10px] text-zinc-600">R.U.C. 20601234567</p>
+        <p className="text-[10px] text-zinc-600">Tradición &amp; Sabor Peruano • Menú y Carta</p>
+        <div className="mt-2 font-bold text-xs uppercase bg-zinc-100 py-1 rounded">
+          {titulo}
+        </div>
+        <p className="text-[10px] text-zinc-500 mt-1">
+          {data.serie}-{data.numero} | Mesa {data.order.table_number}
+        </p>
+        <p className="text-[10px] text-zinc-500">{data.date}</p>
+      </div>
+
+      <div className="text-[10px] space-y-0.5 border-b pb-3 border-dashed border-zinc-400">
+        <div>CLIENTE: {data.clienteNombre}</div>
+        <div>{data.tipo === "factura" ? "RUC" : "DNI"}: {data.clienteDocumento}</div>
+        {(data.tipo === "boleta" || data.tipo === "factura") && data.order.table_number ? (
+          <div>ATENDIDO EN: Mesa {data.order.table_number}</div>
+        ) : null}
+      </div>
+
+      <div className="space-y-2 border-b pb-4 border-dashed border-zinc-400 max-h-56 overflow-y-auto">
+        <div className="flex justify-between font-bold text-[11px] pb-1 border-b">
+          <span>CANT. DESCRIPCIÓN</span>
+          <span>TOTAL</span>
+        </div>
+        {data.order.items && data.order.items.length > 0 ? (
+          data.order.items.map((it, i) => (
+            <div key={i} className="flex flex-col py-0.5 border-b border-zinc-100">
+              <div className="flex justify-between">
+                <span className="truncate pr-2 font-semibold">{it.quantity}x {it.name}</span>
+                <span className="font-bold">S/ {it.subtotal.toFixed(2)}</span>
+              </div>
+              {it.notes && (
+                <span className="text-[9px] text-zinc-600 italic pl-2">↳ {it.notes}</span>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="flex justify-between">
+            <span>Consumo General</span>
+            <span>S/ {data.amount.toFixed(2)}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-1 text-[11px]">
+        <div className="flex justify-between text-zinc-600">
+          <span>OP. GRAVADA:</span>
+          <span>S/ {(data.amount / 1.18).toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between text-zinc-600">
+          <span>I.G.V. (18%):</span>
+          <span>S/ {(data.amount - data.amount / 1.18).toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between font-black text-sm">
+          <span>TOTAL A PAGAR:</span>
+          <span>S/ {data.amount.toFixed(2)}</span>
+        </div>
+        <div className="flex justify-between text-zinc-600">
+          <span>MÉTODO:</span>
+          <span>{data.method}</span>
+        </div>
+        {data.cashGiven !== undefined && (
+          <>
+            <div className="flex justify-between text-zinc-600">
+              <span>PAGÓ CON:</span>
+              <span>S/ {data.cashGiven.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-zinc-800 font-bold">
+              <span>VUELTO:</span>
+              <span>S/ {(data.change || 0).toFixed(2)}</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="text-center text-[10px] text-zinc-500 border-t pt-3 border-dashed border-zinc-400">
+        <p className="font-bold">¡Gracias por su preferencia!</p>
+        <p>Sabor Chugurano • www.saborchugurano.pe</p>
+      </div>
+    </div>
+  );
+}
+
 export default function CajaPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -60,14 +175,12 @@ export default function CajaPage() {
   const [paymentMethod, setPaymentMethod] = useState<"Efectivo" | "Tarjeta" | "Yape" | "Plin">("Efectivo");
   const [cashGiven, setCashGiven] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [completedPaymentTicket, setCompletedPaymentTicket] = useState<{
-    order: Order;
-    method: string;
-    amount: number;
-    cashGiven?: number;
-    change?: number;
-    date: string;
-  } | null>(null);
+  const [completedPaymentTicket, setCompletedPaymentTicket] = useState<TicketCajaData | null>(null);
+
+  // Datos del comprobante a emitir al cobrar
+  const [comprobanteTipo, setComprobanteTipo] = useState<ComprobanteTipo>("simple");
+  const [docNumero, setDocNumero] = useState("");
+  const [nombreCliente, setNombreCliente] = useState("");
 
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"pendientes" | "historial">("pendientes");
@@ -126,6 +239,9 @@ export default function CajaPage() {
     setSelectedOrder(order);
     setCashGiven(order.total_amount.toString());
     setPaymentMethod("Efectivo");
+    setComprobanteTipo("simple");
+    setDocNumero("");
+    setNombreCliente("");
 
     try {
       const res = await apiFetch(`/orders/${order.id}`);
@@ -146,6 +262,24 @@ export default function CajaPage() {
       alert("Error: sesión no iniciada. Por favor recarga la página.");
       return;
     }
+
+    const esFactura = comprobanteTipo === "factura";
+    const doc = docNumero.trim();
+    if (comprobanteTipo !== "simple") {
+      if (!nombreCliente.trim()) {
+        alert(esFactura ? "Ingresa la razón social del cliente" : "Ingresa el nombre del cliente");
+        return;
+      }
+      if (esFactura && doc.length !== 11) {
+        alert("El RUC debe tener 11 dígitos");
+        return;
+      }
+      if (!esFactura && doc.length !== 8) {
+        alert("El DNI debe tener 8 dígitos");
+        return;
+      }
+    }
+
     setIsProcessing(true);
 
     // Usar el estado `user` que ya está en memoria (cargado desde localStorage al inicio)
@@ -168,13 +302,70 @@ export default function CajaPage() {
         const given = parseFloat(cashGiven) || selectedOrder.total_amount;
         const change = Math.max(0, given - selectedOrder.total_amount);
 
+        const total = Number(selectedOrder.total_amount);
+        const subtotal = Number((total / 1.18).toFixed(2));
+        const igv = Number((total - subtotal).toFixed(2));
+        const clienteNombreFinal = comprobanteTipo === "simple" ? "CLIENTES VARIOS" : nombreCliente.trim();
+        const clienteDocumentoFinal = comprobanteTipo === "simple" ? "00000000" : doc;
+        const serie = esFactura ? "F001" : "B001";
+        let numero = "000000";
+
+        try {
+          const ventas = await obtenerVentas();
+          numero = String(ventas.length + 46).padStart(6, "0");
+
+          const itemsVenta: DetalleVenta[] = (selectedOrder.items || []).map((it) => ({
+            producto_id: 0,
+            nombre: it.name,
+            cantidad: it.quantity,
+            precio_unitario: it.unit_price,
+            subtotal: it.subtotal,
+          }));
+          if (itemsVenta.length === 0) {
+            itemsVenta.push({
+              producto_id: 0,
+              nombre: `Consumo Mesa ${selectedOrder.table_number}`,
+              cantidad: 1,
+              precio_unitario: total,
+              subtotal: total,
+            });
+          }
+
+          const venta: Venta = {
+            id: 0,
+            tipo: esFactura ? "factura" : "boleta",
+            serie,
+            numero,
+            cliente_id: 0,
+            cliente_nombre: clienteNombreFinal,
+            cliente_documento: clienteDocumentoFinal,
+            direccion: "",
+            productos: itemsVenta,
+            subtotal,
+            igv,
+            total,
+            metodo_pago: paymentMethod,
+            fecha: new Date().toISOString().slice(0, 10),
+            estado: "Emitida",
+          };
+          await registrarVenta(venta);
+        } catch (err) {
+          console.error(err);
+          alert("El pago se registró, pero no se pudo emitir el comprobante. Puedes emitirlo desde Facturación.");
+        }
+
         setCompletedPaymentTicket({
           order: selectedOrder,
           method: paymentMethod,
-          amount: selectedOrder.total_amount,
+          amount: total,
           cashGiven: paymentMethod === "Efectivo" ? given : undefined,
           change: paymentMethod === "Efectivo" ? change : undefined,
-          date: new Date().toLocaleString()
+          date: new Date().toLocaleString(),
+          tipo: comprobanteTipo,
+          clienteNombre: clienteNombreFinal,
+          clienteDocumento: clienteDocumentoFinal,
+          serie,
+          numero,
         });
 
         setSelectedOrder(null);
@@ -247,9 +438,9 @@ export default function CajaPage() {
   );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-foreground pb-20">
+    <div className="min-h-screen bg-zinc-950 print:bg-white text-foreground pb-20">
       {/* Top Navbar */}
-      <div className="bg-zinc-900/80 border-b border-white/5 sticky top-0 z-40 backdrop-blur-xl">
+      <div className="print:hidden bg-zinc-900/80 border-b border-white/5 sticky top-0 z-40 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 min-h-16 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -309,7 +500,7 @@ export default function CajaPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
+      <div className="print:hidden max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
         {/* Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-5 relative overflow-hidden">
@@ -481,7 +672,7 @@ export default function CajaPage() {
       {/* MODAL DE COBRO */}
       <AnimatePresence>
         {selectedOrder && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="print:hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -562,6 +753,66 @@ export default function CajaPage() {
                   </div>
                 </div>
 
+                {/* Comprobante a emitir */}
+                <div>
+                  <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Comprobante</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { id: "simple", label: "Boleta simple" },
+                      { id: "boleta", label: "Boleta con DNI" },
+                      { id: "factura", label: "Factura con RUC" },
+                    ].map((op) => (
+                      <button
+                        key={op.id}
+                        type="button"
+                        onClick={() => setComprobanteTipo(op.id as ComprobanteTipo)}
+                        className={`p-3 rounded-2xl border text-xs font-bold transition-all ${comprobanteTipo === op.id
+                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
+                          : "bg-zinc-950 text-zinc-400 border-white/5 hover:text-white hover:border-white/20"
+                          }`}
+                      >
+                        {op.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {comprobanteTipo !== "simple" && (
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
+                          {comprobanteTipo === "factura" ? "RUC (11 dígitos)" : "DNI (8 dígitos)"}
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={docNumero}
+                          maxLength={comprobanteTipo === "factura" ? 11 : 8}
+                          onChange={(e) => setDocNumero(e.target.value.replace(/\D/g, ""))}
+                          placeholder={comprobanteTipo === "factura" ? "20601234567" : "47589632"}
+                          className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2.5 px-3 font-mono text-white focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
+                          {comprobanteTipo === "factura" ? "Razón Social" : "Nombres y Apellidos"}
+                        </label>
+                        <input
+                          type="text"
+                          value={nombreCliente}
+                          onChange={(e) => setNombreCliente(e.target.value)}
+                          placeholder={comprobanteTipo === "factura" ? "Empresa SAC" : "Juan Pérez"}
+                          className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2.5 px-3 text-white focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {comprobanteTipo === "simple" && (
+                    <p className="mt-2 text-xs text-zinc-500">
+                      Se emitirá como “Clientes Varios” (DNI 00000000) para registrar el consumo.
+                    </p>
+                  )}
+                </div>
+
                 {/* Si es efectivo: Calculadora de vuelto */}
                 {paymentMethod === "Efectivo" && (
                   <div className="bg-zinc-950/80 rounded-2xl p-4 border border-white/5 space-y-4">
@@ -626,7 +877,7 @@ export default function CajaPage() {
                   onClick={handleProcessPayment}
                   className="px-7 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold rounded-xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
                 >
-                  {isProcessing ? "Procesando..." : "Confirmar Pago & Boleta"}
+                  {isProcessing ? "Procesando..." : "Confirmar Pago & Emitir"}
                 </button>
               </div>
             </motion.div>
@@ -637,91 +888,21 @@ export default function CajaPage() {
       {/* MODAL DE TICKET / BOLETA IMPRIMIBLE */}
       <AnimatePresence>
         {completedPaymentTicket && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="print:hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white text-zinc-900 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl p-6 font-mono text-xs flex flex-col gap-4"
+              className="w-full max-w-sm flex flex-col gap-3"
             >
-              {/* Header Boleta */}
-              <div className="text-center border-b pb-4 border-dashed border-zinc-400">
-                <div className="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden border border-zinc-300">
-                  <img src="/images/logo.png" alt="Sabor Chugurano" className="w-full h-full object-cover" />
-                </div>
-                <h2 className="font-black text-lg uppercase tracking-wider">SABOR CHUGURANO</h2>
-                <p className="text-[10px] text-zinc-600">R.U.C. 20601234567</p>
-                <p className="text-[10px] text-zinc-600">Tradición &amp; Sabor Peruano • Menú y Carta</p>
-                <div className="mt-2 font-bold text-xs uppercase bg-zinc-100 py-1 rounded">
-                  BOLETA DE VENTA ELECTRÓNICA
-                </div>
-                <p className="text-[10px] text-zinc-500 mt-1">Ticket #{completedPaymentTicket.order.id} | Mesa {completedPaymentTicket.order.table_number}</p>
-                <p className="text-[10px] text-zinc-500">{completedPaymentTicket.date}</p>
-              </div>
-
-              {/* Items */}
-              <div className="space-y-2 border-b pb-4 border-dashed border-zinc-400 max-h-56 overflow-y-auto">
-                <div className="flex justify-between font-bold text-[11px] pb-1 border-b">
-                  <span>CANT. DESCRIPCIÓN</span>
-                  <span>TOTAL</span>
-                </div>
-                {completedPaymentTicket.order.items && completedPaymentTicket.order.items.length > 0 ? (
-                  completedPaymentTicket.order.items.map((it, i) => (
-                    <div key={i} className="flex flex-col py-0.5 border-b border-zinc-100">
-                      <div className="flex justify-between">
-                        <span className="truncate pr-2 font-semibold">{it.quantity}x {it.name}</span>
-                        <span className="font-bold">S/ {it.subtotal.toFixed(2)}</span>
-                      </div>
-                      {it.notes && (
-                        <span className="text-[9px] text-zinc-600 italic pl-2">↳ {it.notes}</span>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex justify-between">
-                    <span>Consumo General</span>
-                    <span>S/ {completedPaymentTicket.amount.toFixed(2)}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Totales y Vuelto */}
-              <div className="space-y-1 text-[11px]">
-                <div className="flex justify-between font-black text-sm">
-                  <span>TOTAL A PAGAR:</span>
-                  <span>S/ {completedPaymentTicket.amount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-zinc-600">
-                  <span>MÉTODO:</span>
-                  <span>{completedPaymentTicket.method}</span>
-                </div>
-                {completedPaymentTicket.cashGiven !== undefined && (
-                  <>
-                    <div className="flex justify-between text-zinc-600">
-                      <span>PAGÓ CON:</span>
-                      <span>S/ {completedPaymentTicket.cashGiven.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-zinc-800 font-bold">
-                      <span>VUELTO:</span>
-                      <span>S/ {(completedPaymentTicket.change || 0).toFixed(2)}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Pie de ticket */}
-              <div className="text-center text-[10px] text-zinc-500 border-t pt-3 border-dashed border-zinc-400">
-                <p className="font-bold">¡Gracias por su preferencia!</p>
-                <p>Sabor Chugurano • www.saborchugurano.pe</p>
-              </div>
-
+              <BoletaTicket data={completedPaymentTicket} />
 
               {/* Botones de acción */}
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="flex-1 py-2.5 bg-zinc-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-800 transition-colors"
+                  className="flex-1 py-2.5 bg-zinc-900 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-zinc-800 transition-colors border border-white/20"
                 >
                   <Printer className="w-4 h-4" /> Imprimir
                 </button>
@@ -737,6 +918,13 @@ export default function CajaPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Área exclusiva de impresión: solo el comprobante */}
+      {completedPaymentTicket && (
+        <div className="hidden print:block">
+          <BoletaTicket data={completedPaymentTicket} />
+        </div>
+      )}
     </div>
   );
 }

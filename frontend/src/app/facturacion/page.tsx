@@ -315,8 +315,8 @@ export default function FacturacionPage() {
       alert("Debe agregar al menos un ítem al comprobante");
       return;
     }
-    if (!clienteNombre.trim()) {
-      alert("Ingrese el nombre o razón social del cliente");
+    if (tipoComprobante === "factura" && !clienteNombre.trim()) {
+      alert("Ingrese la razón social del cliente para la factura");
       return;
     }
 
@@ -327,7 +327,7 @@ export default function FacturacionPage() {
       serie,
       numero: correlativo,
       cliente_id: 0,
-      cliente_nombre: clienteNombre.trim(),
+      cliente_nombre: clienteNombre.trim() || "CLIENTES VARIOS",
       cliente_documento: documentoNumero.trim() || (tipoComprobante === "boleta" ? "00000000" : "20601234567"),
       direccion: clienteDireccion.trim() || undefined,
       productos: items,
@@ -422,7 +422,7 @@ export default function FacturacionPage() {
     numero: String(ventas.length + 46).padStart(6, "0"),
     fecha: `${new Date().toLocaleDateString("es-PE")} ${new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}`,
     clienteNombre: clienteNombre || "CLIENTES VARIOS",
-    clienteDocumento: documentoNumero || "-",
+    clienteDocumento: documentoNumero || (tipoComprobante === "boleta" ? "00000000" : "20601234567"),
     clienteDireccion: clienteDireccion || undefined,
     metodoPago,
     items,
