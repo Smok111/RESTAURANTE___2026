@@ -16,11 +16,14 @@ import {
   X,
   TrendingUp,
   CircleCheck,
-  LogOut
+  LogOut,
+  Search,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { DetalleVenta, Venta, obtenerVentas, registrarVenta } from "@/lib/facturacion";
+import { consultarDNI, consultarRUC } from "@/lib/reniecRuc";
 
 
 type OrderItem = {
@@ -181,6 +184,8 @@ export default function CajaPage() {
   const [comprobanteTipo, setComprobanteTipo] = useState<ComprobanteTipo>("simple");
   const [docNumero, setDocNumero] = useState("");
   const [nombreCliente, setNombreCliente] = useState("");
+  const [consultandoDoc, setConsultandoDoc] = useState(false);
+  const [errorDoc, setErrorDoc] = useState<string | null>(null);
 
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"pendientes" | "historial">("pendientes");
@@ -242,6 +247,7 @@ export default function CajaPage() {
     setComprobanteTipo("simple");
     setDocNumero("");
     setNombreCliente("");
+    setErrorDoc(null);
 
     try {
       const res = await apiFetch(`/orders/${order.id}`);
@@ -253,6 +259,40 @@ export default function CajaPage() {
       console.error(err);
     } finally {
       setOrderDetailsLoading(false);
+    }
+  };
+
+  const handleConsultarDocumento = async () => {
+    setErrorDoc(null);
+    const doc = docNumero.trim();
+    const esFactura = comprobanteTipo === "factura";
+
+    if (!doc) {
+      setErrorDoc("Ingrese el número de documento");
+      return;
+    }
+    if (esFactura && doc.length !== 11) {
+      setErrorDoc("El RUC debe tener 11 dígitos");
+      return;
+    }
+    if (!esFactura && doc.length !== 8) {
+      setErrorDoc("El DNI debe tener 8 dígitos");
+      return;
+    }
+
+    setConsultandoDoc(true);
+    try {
+      if (esFactura) {
+        const data = await consultarRUC(doc);
+        setNombreCliente(data.razonSocial);
+      } else {
+        const data = await consultarDNI(doc);
+        setNombreCliente(data.nombreCompleto);
+      }
+    } catch (err) {
+      setErrorDoc(err instanceof Error ? err.message : "No se pudo consultar el documento");
+    } finally {
+      setConsultandoDoc(false);
     }
   };
 
@@ -765,7 +805,10 @@ export default function CajaPage() {
                       <button
                         key={op.id}
                         type="button"
-                        onClick={() => setComprobanteTipo(op.id as ComprobanteTipo)}
+                        onClick={() => {
+                          setComprobanteTipo(op.id as ComprobanteTipo);
+                          setErrorDoc(null);
+                        }}
                         className={`p-3 rounded-2xl border text-xs font-bold transition-all ${comprobanteTipo === op.id
                           ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
                           : "bg-zinc-950 text-zinc-400 border-white/5 hover:text-white hover:border-white/20"
@@ -782,15 +825,33 @@ export default function CajaPage() {
                         <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
                           {comprobanteTipo === "factura" ? "RUC (11 dígitos)" : "DNI (8 dígitos)"}
                         </label>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={docNumero}
-                          maxLength={comprobanteTipo === "factura" ? 11 : 8}
-                          onChange={(e) => setDocNumero(e.target.value.replace(/\D/g, ""))}
-                          placeholder={comprobanteTipo === "factura" ? "20601234567" : "47589632"}
-                          className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2.5 px-3 font-mono text-white focus:outline-none focus:border-primary"
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={docNumero}
+                            maxLength={comprobanteTipo === "factura" ? 11 : 8}
+                            onChange={(e) => {
+                              setDocNumero(e.target.value.replace(/\D/g, ""));
+                              setErrorDoc(null);
+                            }}
+                            placeholder={comprobanteTipo === "factura" ? "20601234567" : "47589632"}
+                            className="flex-1 min-w-0 bg-zinc-950 border border-white/10 rounded-xl py-2.5 px-3 font-mono text-white focus:outline-none focus:border-primary"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleConsultarDocumento}
+                            disabled={consultandoDoc}
+                            className="shrink-0 px-3 rounded-xl bg-zinc-800 border border-white/10 text-amber-400 text-xs font-bold hover:bg-zinc-700 disabled:opacity-50 flex items-center gap-1.5"
+                            title={comprobanteTipo === "factura" ? "Consultar SUNAT" : "Consultar RENIEC"}
+                          >
+                            {consultandoDoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                            <span className="hidden sm:inline">
+                              {comprobanteTipo === "factura" ? "SUNAT" : "RENIEC"}
+                            </span>
+                          </button>
+                        </div>
+                        {errorDoc && <p className="mt-1 text-[11px] text-red-400">{errorDoc}</p>}
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-zinc-400 mb-1.5">
