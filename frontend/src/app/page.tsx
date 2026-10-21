@@ -20,7 +20,9 @@ import {
   Soup,
   Check,
   Lock,
-  LogOut
+  LogOut,
+  Menu,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -109,6 +111,7 @@ export default function Home() {
     phone?: string;
     role_id?: number;
   } | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -278,7 +281,7 @@ export default function Home() {
           </Link>
 
           {/* Enlaces de Navegación del Cliente */}
-          <div className="hidden md:flex items-center gap-8 text-sm font-semibold tracking-wide text-zinc-300">
+          <div className="hidden lg:flex items-center gap-6 text-sm font-semibold tracking-wide text-zinc-300 whitespace-nowrap">
             <a href="#menu-del-dia" className="hover:text-amber-400 transition-colors flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               Menú del Día (S/ 10)
@@ -333,8 +336,77 @@ export default function Home() {
             >
               Reservar Mesa
             </a>
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              className="lg:hidden p-2 rounded-full border border-white/10 text-zinc-300 hover:text-white transition-colors"
+              aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-white/5 bg-background/95 backdrop-blur-xl px-4 pb-4 pt-2 space-y-1">
+            {[
+              { href: "#menu-del-dia", label: "Menú del Día (S/ 10)" },
+              { href: "#menu", label: "Platos a la Carta" },
+              { href: "#nosotros", label: "Nosotros" },
+              { href: "#reservas", label: "Reservar Mesa" },
+            ].map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-zinc-300 hover:bg-white/5 hover:text-amber-400 transition-colors"
+              >
+                {item.label}
+              </a>
+            ))}
+
+            {loggedUser ? (
+              <>
+                <Link
+                  href="/mis-reservas"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-zinc-300 hover:bg-white/5 hover:text-amber-400 transition-colors"
+                >
+                  Mis Reservas
+                </Link>
+                {panelHref && (
+                  <Link
+                    href={panelHref}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-zinc-300 hover:bg-white/5 hover:text-amber-400 transition-colors"
+                  >
+                    Panel
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="block w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  Cerrar sesión
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-zinc-300 hover:bg-white/5 hover:text-amber-400 transition-colors"
+              >
+                Ingresar
+              </Link>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
