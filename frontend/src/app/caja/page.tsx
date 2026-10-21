@@ -18,7 +18,8 @@ import {
   CircleCheck,
   LogOut,
   Search,
-  Loader2
+  Loader2,
+  Plus
 } from "lucide-react";
 import Link from "next/link";
 import Logo from "@/components/Logo";
@@ -54,6 +55,8 @@ type Payment = {
 };
 
 type ComprobanteTipo = "simple" | "boleta" | "factura";
+type PaymentMethod = "Efectivo" | "Tarjeta" | "Yape" | "Plin";
+type PagoSplit = { method: PaymentMethod; amount: string };
 
 type TicketCajaData = {
   order: Order;
@@ -69,6 +72,7 @@ type TicketCajaData = {
   clienteTelefono?: string;
   serie: string;
   numero: string;
+  pagos?: { method: string; amount: number }[];
 };
 
 function BoletaTicket({ data }: { data: TicketCajaData }) {
@@ -147,8 +151,18 @@ function BoletaTicket({ data }: { data: TicketCajaData }) {
         </div>
         <div className="flex justify-between text-zinc-600">
           <span>MÉTODO:</span>
-          <span>{data.method}</span>
+          <span className="text-right">{data.method}</span>
         </div>
+        {data.pagos && data.pagos.length > 1 && (
+          <div className="pl-3 space-y-0.5">
+            {data.pagos.map((p, i) => (
+              <div key={i} className="flex justify-between text-zinc-500">
+                <span>• {p.method}</span>
+                <span>S/ {p.amount.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {data.cashGiven !== undefined && (
           <>
             <div className="flex justify-between text-zinc-600">
@@ -179,7 +193,7 @@ export default function CajaPage() {
   const [orderDetailsLoading, setOrderDetailsLoading] = useState(false);
   
   // Modal de cobro
-  const [paymentMethod, setPaymentMethod] = useState<"Efectivo" | "Tarjeta" | "Yape" | "Plin">("Efectivo");
+  const [pagos, setPagos] = useState<PagoSplit[]>([{ method: "Efectivo", amount: "" }]);
   const [cashGiven, setCashGiven] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [completedPaymentTicket, setCompletedPaymentTicket] = useState<TicketCajaData | null>(null);
@@ -195,6 +209,43 @@ export default function CajaPage() {
 
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"pendientes" | "historial">("pendientes");
+
+  // Totales del pago (simple o híbrido)
+  const totalOrden = selectedOrder?.total_amount || 0;
+  const pagosValidos = pagos
+    .map((p) => ({ method: p.method, amount: Number(p.amount) || 0 }))
+    .filter((p) => p.amount > 0);
+  const totalPagado = pagosValidos.reduce((acc, p) => acc + p.amount, 0);
+  const falta = Math.max(0, totalOrden - totalPagado);
+  const excede = Math.max(0, totalPagado - totalOrden);
+  const efectivoAplicado = pagosValidos
+    .filter((p) => p.method === "Efectivo")
+    .reduce((acc, p) => acc + p.amount, 0);
+  const parsedCash = parseFloat(cashGiven) || 0;
+  const vuelto = Math.max(0, parsedCash - efectivoAplicado);
+  const metodosResumen = Array.from(new Set(pagosValidos.map((p) => p.method))).join(" + ");
+
+  const updatePago = (index: number, patch: Partial<PagoSplit>) => {
+    setPagos((prev) =>
+      prev.map((p, i) => {
+        if (i !== index) return p;
+        const next = { ...p, ...patch };
+        if (next.method === "Efectivo" && (patch.amount !== undefined || patch.method !== undefined)) {
+          setCashGiven(patch.amount !== undefined ? patch.amount || "" : next.amount || "");
+        }
+        return next;
+      })
+    );
+  };
+
+  const agregarPago = () => {
+    const restante = Math.max(0, totalOrden - totalPagado);
+    setPagos((prev) => [...prev, { method: "Yape", amount: restante > 0 ? restante.toFixed(2) : "" }]);
+  };
+
+  const quitarPago = (index: number) => {
+    setPagos((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev));
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -249,7 +300,7 @@ export default function CajaPage() {
     setOrderDetailsLoading(true);
     setSelectedOrder(order);
     setCashGiven(order.total_amount.toString());
-    setPaymentMethod("Efectivo");
+    setPagos([{ method: "Efectivo", amount: order.total_amount.toString() }]);
     setComprobanteTipo("simple");
     setDocNumero("");
     setNombreCliente("");
@@ -329,6 +380,22 @@ export default function CajaPage() {
       }
     }
 
+    if (pagosValidos.length === 0) {
+      alert("Ingresa al menos un monto de pago");
+      return;
+    }
+    if (Math.abs(totalPagado - totalOrden) > 0.01) {
+      alert(
+        `Los montos deben sumar S/ ${totalOrden.toFixed(2)}. ` +
+        (falta > 0.009 ? `Falta S/ ${falta.toFixed(2)}` : `Excede S/ ${excede.toFixed(2)}`)
+      );
+      return;
+    }
+    if (efectivoAplicado > 0 && parsedCash < efectivoAplicado) {
+      alert("El efectivo recibido es menor al monto aplicado en efectivo");
+      return;
+    }
+
     setIsProcessing(true);
 
     // Usar el estado `user` que ya está en memoria (cargado desde localStorage al inicio)
@@ -342,14 +409,15 @@ export default function CajaPage() {
         body: JSON.stringify({
           order_id: Number(selectedOrder.id),
           cashier_id: cashierId,
-          payment_method: paymentMethod,
-          amount: Number(selectedOrder.total_amount)
+          payment_method: metodosResumen,
+          amount: totalPagado,
+          payments: pagosValidos.map((p) => ({ method: p.method, amount: p.amount })),
         })
       });
 
       if (res.ok) {
-        const given = parseFloat(cashGiven) || selectedOrder.total_amount;
-        const change = Math.max(0, given - selectedOrder.total_amount);
+        const given = efectivoAplicado > 0 ? parsedCash : totalPagado;
+        const change = efectivoAplicado > 0 ? Math.max(0, parsedCash - efectivoAplicado) : 0;
 
         const total = Number(selectedOrder.total_amount);
         const subtotal = Number((total / 1.18).toFixed(2));
@@ -358,6 +426,8 @@ export default function CajaPage() {
         const clienteDocumentoFinal = comprobanteTipo === "simple" ? "00000000" : doc;
         const direccionFinal = comprobanteTipo === "simple" ? "" : direccionCliente.trim();
         const telefonoFinal = comprobanteTipo === "simple" ? "" : telefonoCliente.trim();
+        const metodoPagoVenta: Venta["metodo_pago"] =
+          pagosValidos.length === 1 ? pagosValidos[0].method : ("Mixto" as Venta["metodo_pago"]);
         const serie = esFactura ? "F001" : "B001";
         let numero = "000000";
 
@@ -395,7 +465,7 @@ export default function CajaPage() {
             subtotal,
             igv,
             total,
-            metodo_pago: paymentMethod,
+            metodo_pago: metodoPagoVenta,
             fecha: new Date().toISOString().slice(0, 10),
             estado: "Emitida",
           };
@@ -421,10 +491,10 @@ export default function CajaPage() {
 
         setCompletedPaymentTicket({
           order: selectedOrder,
-          method: paymentMethod,
+          method: metodosResumen || metodoPagoVenta,
           amount: total,
-          cashGiven: paymentMethod === "Efectivo" ? given : undefined,
-          change: paymentMethod === "Efectivo" ? change : undefined,
+          cashGiven: efectivoAplicado > 0 ? given : undefined,
+          change: efectivoAplicado > 0 ? change : undefined,
           date: new Date().toLocaleString(),
           tipo: comprobanteTipo,
           clienteNombre: clienteNombreFinal,
@@ -433,6 +503,7 @@ export default function CajaPage() {
           clienteTelefono: telefonoFinal || undefined,
           serie,
           numero,
+          pagos: pagosValidos,
         });
 
         setSelectedOrder(null);
@@ -458,9 +529,6 @@ export default function CajaPage() {
   const efectivoTotal = payments.filter(p => p.payment_method === "Efectivo").reduce((a, b) => a + b.amount, 0);
   const tarjetaTotal = payments.filter(p => p.payment_method === "Tarjeta").reduce((a, b) => a + b.amount, 0);
   const digitalTotal = payments.filter(p => p.payment_method === "Yape" || p.payment_method === "Plin").reduce((a, b) => a + b.amount, 0);
-
-  const parsedCash = parseFloat(cashGiven) || 0;
-  const vuelto = selectedOrder ? Math.max(0, parsedCash - selectedOrder.total_amount) : 0;
 
   const renderOrderCard = (order: Order, isReady: boolean) => (
     <motion.div
@@ -789,34 +857,67 @@ export default function CajaPage() {
                   )}
                 </div>
 
-                {/* Métodos de Pago */}
+                {/* Métodos de Pago (simple o híbrido) */}
                 <div>
-                  <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Método de Pago</h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                      { id: "Efectivo", icon: DollarSign, label: "Efectivo" },
-                      { id: "Tarjeta", icon: CreditCard, label: "Tarjeta POS" },
-                      { id: "Yape", icon: Smartphone, label: "Yape" },
-                      { id: "Plin", icon: Smartphone, label: "Plin" }
-                    ].map((m) => {
-                      const Icon = m.icon;
-                      const isSel = paymentMethod === m.id;
-                      return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => setPaymentMethod(m.id as any)}
-                          className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all font-bold text-xs ${
-                            isSel
-                              ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20 scale-[1.02]"
-                              : "bg-zinc-950 text-zinc-400 border-white/5 hover:text-white hover:border-white/20"
-                          }`}
+                  <div className="flex items-center justify-between mb-3 gap-3">
+                    <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Formas de Pago</h4>
+                    <button
+                      type="button"
+                      onClick={agregarPago}
+                      className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Agregar método
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {pagos.map((p, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <select
+                          value={p.method}
+                          onChange={(e) => updatePago(idx, { method: e.target.value as PaymentMethod })}
+                          className="flex-1 min-w-0 bg-zinc-950 border border-white/10 rounded-xl py-2.5 px-3 text-sm font-bold text-white focus:outline-none focus:border-primary"
                         >
-                          <Icon className="w-5 h-5" />
-                          {m.label}
-                        </button>
-                      );
-                    })}
+                          <option value="Efectivo">Efectivo</option>
+                          <option value="Tarjeta">Tarjeta POS</option>
+                          <option value="Yape">Yape</option>
+                          <option value="Plin">Plin</option>
+                        </select>
+                        <div className="relative w-32 shrink-0">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">S/</span>
+                          <input
+                            type="number"
+                            step="0.10"
+                            min="0"
+                            value={p.amount}
+                            onChange={(e) => updatePago(idx, { amount: e.target.value })}
+                            placeholder="0.00"
+                            className="w-full bg-zinc-950 border border-white/10 rounded-xl py-2.5 pl-9 pr-3 font-bold text-white focus:outline-none focus:border-primary"
+                          />
+                        </div>
+                        {pagos.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => quitarPago(idx)}
+                            className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-lg shrink-0"
+                            title="Quitar método"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
+                    <span className="text-zinc-400">Pagado: S/ {totalPagado.toFixed(2)}</span>
+                    <span className={falta > 0.009 ? "text-amber-400" : excede > 0.009 ? "text-rose-400" : "text-emerald-400"}>
+                      {falta > 0.009
+                        ? `Falta: S/ ${falta.toFixed(2)}`
+                        : excede > 0.009
+                          ? `Excede: S/ ${excede.toFixed(2)}`
+                          : "Completo"}
+                    </span>
                   </div>
                 </div>
 
@@ -931,11 +1032,11 @@ export default function CajaPage() {
                 </div>
 
                 {/* Si es efectivo: Calculadora de vuelto */}
-                {paymentMethod === "Efectivo" && (
+                {efectivoAplicado > 0 && (
                   <div className="bg-zinc-950/80 rounded-2xl p-4 border border-white/5 space-y-4">
                     <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
                       <div className="w-full sm:w-1/2">
-                        <label className="block text-xs font-semibold text-zinc-400 mb-1.5">Monto Entregado por Cliente</label>
+                        <label className="block text-xs font-semibold text-zinc-400 mb-1.5">Efectivo Recibido del Cliente</label>
                         <div className="relative">
                           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">S/</span>
                           <input
@@ -958,7 +1059,7 @@ export default function CajaPage() {
                     {/* Botones rápidos de billetes */}
                     <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5 text-xs font-bold">
                       <span className="text-zinc-500 self-center mr-1">Rápido:</span>
-                      {[selectedOrder.total_amount, 20, 50, 100].map((val, idx) => (
+                      {[efectivoAplicado, 20, 50, 100].map((val, idx) => (
                         <button
                           key={idx}
                           type="button"
@@ -990,7 +1091,11 @@ export default function CajaPage() {
                 </button>
                 <button
                   type="button"
-                  disabled={isProcessing || (paymentMethod === "Efectivo" && parsedCash < selectedOrder.total_amount)}
+                  disabled={
+                    isProcessing ||
+                    Math.abs(totalPagado - selectedOrder.total_amount) > 0.01 ||
+                    (efectivoAplicado > 0 && parsedCash < efectivoAplicado)
+                  }
                   onClick={handleProcessPayment}
                   className="px-7 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold rounded-xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
                 >

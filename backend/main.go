@@ -617,11 +617,17 @@ type MenuItemRequest struct {
 	IsAvailable bool    `json:"is_available"`
 }
 
+type PaymentSplitRequest struct {
+	Method string      `json:"method" validate:"required,min=2,max=50"`
+	Amount interface{} `json:"amount"`
+}
+
 type PaymentRequest struct {
-	OrderID       interface{} `json:"order_id"`
-	CashierID     interface{} `json:"cashier_id"`
-	PaymentMethod string      `json:"payment_method" validate:"required,min=2,max=50"`
-	Amount        interface{} `json:"amount"`
+	OrderID       interface{}           `json:"order_id"`
+	CashierID     interface{}           `json:"cashier_id"`
+	PaymentMethod string                `json:"payment_method" validate:"omitempty,min=2,max=50"`
+	Amount        interface{}           `json:"amount"`
+	Payments      []PaymentSplitRequest `json:"payments" validate:"omitempty,min=1,dive"`
 }
 
 func toInt(val interface{}) int {
@@ -869,17 +875,52 @@ func createPayment(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "Restricción de rol: solo personal de caja o administración puede procesar cobros"})
 	}
 
+	// Pago simple (compatibilidad) o pago híbrido con varios métodos
+	splits := req.Payments
+	if len(splits) == 0 {
+		if req.PaymentMethod == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "Debe indicar al menos un método de pago"})
+		}
+		splits = []PaymentSplitRequest{{Method: req.PaymentMethod, Amount: amount}}
+	}
+
 	tx, err := database.DB.Begin()
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	var paymentId int64
-	err = tx.QueryRow("INSERT INTO payments (order_id, cashier_id, payment_method, amount, status) VALUES ($1, $2, $3, $4, 'Completado') RETURNING id",
-		orderId, cashierId, req.PaymentMethod, amount).Scan(&paymentId)
-	if err != nil {
+	var orderTotal float64
+	if err := tx.QueryRow("SELECT total_amount::float8 FROM orders WHERE id = $1", orderId).Scan(&orderTotal); err != nil {
 		tx.Rollback()
-		return c.Status(500).JSON(fiber.Map{"error": "Error al registrar pago: " + err.Error()})
+		return c.Status(404).JSON(fiber.Map{"error": "Orden no encontrada"})
+	}
+
+	totalPaid := 0.0
+	for _, s := range splits {
+		part := toFloat(s.Amount)
+		if part <= 0 {
+			tx.Rollback()
+			return c.Status(400).JSON(fiber.Map{"error": "Cada monto de pago debe ser mayor a cero"})
+		}
+		totalPaid += part
+	}
+	if totalPaid+0.01 < orderTotal {
+		tx.Rollback()
+		return c.Status(400).JSON(fiber.Map{"error": "El monto pagado no cubre el total de la orden"})
+	}
+
+	var paymentId int64
+	for i, s := range splits {
+		var pid int64
+		err = tx.QueryRow("INSERT INTO payments (order_id, cashier_id, payment_method, amount, status) VALUES ($1, $2, $3, $4, 'Completado') RETURNING id",
+			orderId, cashierId, s.Method, toFloat(s.Amount)).Scan(&pid)
+		if err != nil {
+			tx.Rollback()
+			return c.Status(500).JSON(fiber.Map{"error": "Error al registrar pago: " + err.Error()})
+		}
+		if i == 0 {
+			paymentId = pid
+		}
 	}
 
 	_, err = tx.Exec("UPDATE orders SET status = 'Pagado' WHERE id = $1", orderId)
@@ -891,8 +932,10 @@ func createPayment(c *fiber.Ctx) error {
 	tx.Commit()
 
 	return c.Status(201).JSON(fiber.Map{
-		"message":    "Pago registrado con éxito",
-		"payment_id": paymentId,
+		"message":     "Pago registrado con éxito",
+		"payment_id":  paymentId,
+		"total_paid":  totalPaid,
+		"order_total": orderTotal,
 	})
 }
 
