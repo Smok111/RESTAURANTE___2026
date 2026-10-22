@@ -222,22 +222,22 @@ export default function AdminPage() {
     <div className="min-h-screen bg-zinc-950 text-foreground flex flex-col">
       {/* Header */}
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-40 px-4 lg:px-8 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/dashboard" className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <Logo size="sm" />
-            <div>
-              <h1 className="text-lg font-bold text-white flex items-center gap-2">
-                <Settings className="w-5 h-5 text-amber-500" />
-                Panel de Administración Central
+            <div className="hidden sm:block shrink-0"><Logo size="sm" /></div>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <Settings className="w-5 h-5 text-amber-500 shrink-0" />
+                <span className="min-w-0 truncate">Panel de Administración Central</span>
               </h1>
-              <p className="text-xs text-zinc-400">Gestión de Personal, Menú, Categorías y Mesas</p>
+              <p className="text-[11px] sm:text-xs text-zinc-400 truncate">Gestión de Personal, Menú, Categorías y Mesas</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={cargarDatos}
               disabled={cargando}
@@ -278,10 +278,10 @@ export default function AdminPage() {
       </div>
 
       {/* Contenido Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 lg:p-8 space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* USUARIOS Y PERSONAL */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-amber-500" />
@@ -337,11 +337,11 @@ export default function AdminPage() {
                   key={u.id}
                   className="flex items-center justify-between p-3 bg-zinc-950/70 border border-zinc-800 rounded-xl text-xs"
                 >
-                  <div>
-                    <div className="font-bold text-white">{u.name}</div>
-                    <div className="text-zinc-400 font-mono text-[11px]">{u.email}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-white truncate">{u.name}</div>
+                    <div className="text-zinc-400 font-mono text-[11px] truncate">{u.email}</div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
                       {u.role_id === 1 ? "Admin" : u.role_id === 2 ? "Mesero" : u.role_id === 3 ? "Cajero" : "Cocina"}
                     </span>
@@ -358,7 +358,7 @@ export default function AdminPage() {
           </div>
 
           {/* MENÚ Y PLATOS */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="w-5 h-5 text-amber-500" />
@@ -412,13 +412,13 @@ export default function AdminPage() {
                   key={p.id}
                   className="flex items-center justify-between p-2.5 bg-zinc-950/70 border border-zinc-800 rounded-xl text-xs"
                 >
-                  <div>
-                    <div className="font-semibold text-white">{p.name}</div>
-                    <div className="text-[10px] text-zinc-400">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-white truncate">{p.name}</div>
+                    <div className="text-[10px] text-zinc-400 truncate">
                       {categorias.find((c) => c.id === p.category_id)?.name || "Categoría"}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                     <span className="font-bold text-amber-400">S/ {Number(p.price).toFixed(2)}</span>
                     <button
                       onClick={() => handleEliminarProducto(p.id)}
@@ -434,7 +434,7 @@ export default function AdminPage() {
         </div>
 
         {/* CATEGORÍAS DEL MENÚ */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
           <div className="flex items-center gap-2">
             <Grid3X3 className="w-5 h-5 text-amber-500" />
             <h2 className="text-base font-bold text-white">Categorías del Menú ({categorias.length})</h2>
@@ -505,7 +505,7 @@ export default function AdminPage() {
         </div>
 
         {/* MESAS Y ESTADO */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
           <div className="flex items-center gap-2 mb-4">
             <TableIcon className="w-5 h-5 text-amber-500" />
             <h2 className="text-base font-bold text-white">Estado de las 12 Mesas</h2>

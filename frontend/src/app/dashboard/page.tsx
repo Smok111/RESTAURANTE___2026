@@ -713,7 +713,7 @@ export default function Dashboard() {
       </AnimatePresence>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative pt-14 md:pt-0">
+      <main className="flex-1 flex flex-col h-[100dvh] overflow-hidden relative pt-14 md:pt-0">
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px] pointer-events-none" />
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 custom-scrollbar relative z-10">
@@ -739,7 +739,7 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <button
                 onClick={fetchAllData}
                 className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 rounded-xl transition-all text-xs font-bold text-zinc-300"
@@ -870,16 +870,16 @@ export default function Dashboard() {
               </div>
 
               {/* Órdenes Recientes */}
-              <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-6 backdrop-blur-md">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold">Últimas Comandas Registradas</h2>
+              <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-4 sm:p-6 backdrop-blur-md">
+                <div className="flex flex-wrap justify-between items-center gap-2 mb-6">
+                  <h2 className="text-lg sm:text-xl font-bold">Últimas Comandas Registradas</h2>
                   <button onClick={() => setActiveTab("ordenes")} className="text-xs font-bold text-primary hover:underline">
                     Ver todas
                   </button>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                <div className="table-scroll">
+                  <table className="w-full min-w-[720px] text-left border-collapse">
                     <thead>
                       <tr className="border-b border-white/5 text-xs uppercase tracking-wider text-zinc-500">
                         <th className="pb-3 px-4 font-semibold">Orden</th>
@@ -929,9 +929,9 @@ export default function Dashboard() {
 
           {/* TAB 2: GESTIÓN DE ÓRDENES CON DETALLE (Item 4) */}
           {activeTab === 'ordenes' && (
-            <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-6 backdrop-blur-md">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+            <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-4 sm:p-6 backdrop-blur-md">
+              <div className="table-scroll">
+                <table className="w-full min-w-[720px] text-left border-collapse">
                   <thead>
                     <tr className="border-b border-white/5 text-xs uppercase tracking-wider text-zinc-500">
                       <th className="pb-4 px-4 font-semibold">ID</th>
@@ -1080,9 +1080,9 @@ export default function Dashboard() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="bg-zinc-900/80 border border-white/10 rounded-3xl p-6 backdrop-blur-md overflow-hidden scroll-mt-4"
+                    className="bg-zinc-900/80 border border-white/10 rounded-3xl p-4 sm:p-6 backdrop-blur-md overflow-hidden scroll-mt-4"
                   >
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-wrap justify-between items-center gap-2 mb-6">
                       <h3 className="text-lg font-bold">
                         {editingDish ? "Editar Plato" : "Crear Nuevo Plato en la Carta"}
                       </h3>
@@ -1257,9 +1257,9 @@ export default function Dashboard() {
               </AnimatePresence>
 
               {/* Lista de Platos */}
-              <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-6 backdrop-blur-md">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+              <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-4 sm:p-6 backdrop-blur-md">
+                <div className="table-scroll">
+                  <table className="w-full min-w-[720px] text-left border-collapse">
                     <thead>
                       <tr className="border-b border-white/5 text-xs uppercase tracking-wider text-zinc-500">
                         <th className="pb-4 px-4 font-semibold w-16">Foto</th>
@@ -1384,9 +1384,9 @@ export default function Dashboard() {
                 </div>
               )}
 
-              <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-6 backdrop-blur-md">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+              <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-4 sm:p-6 backdrop-blur-md">
+                <div className="table-scroll">
+                  <table className="w-full min-w-[720px] text-left border-collapse">
                     <thead>
                       <tr className="border-b border-white/5 text-xs uppercase tracking-wider text-zinc-500">
                         <th className="pb-4 px-4 font-semibold">Nombre</th>
@@ -1482,7 +1482,7 @@ export default function Dashboard() {
               </div>
 
               {/* Tabla de Reservas */}
-              <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-6 backdrop-blur-md">
+              <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-4 sm:p-6 backdrop-blur-md">
                 {reservations.filter(r => reservationFilter === 'todas' || r.status === reservationFilter).length === 0 ? (
                   <div className="text-center py-16 text-zinc-500">
                     <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -1490,8 +1490,8 @@ export default function Dashboard() {
                     <p className="text-xs text-zinc-600 mt-1">Las reservas hechas desde la página principal aparecerán aquí.</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                  <div className="table-scroll">
+                    <table className="w-full min-w-[720px] text-left border-collapse">
                       <thead>
                         <tr className="border-b border-white/5 text-xs uppercase tracking-wider text-zinc-500">
                           <th className="pb-4 px-4 font-semibold">Código / Cliente</th>

@@ -594,12 +594,12 @@ export default function CajaPage() {
           </div>
 
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
             {user && (
-              <div className="flex items-center gap-2 px-3.5 py-2 bg-zinc-800/80 rounded-xl border border-white/5 text-xs">
+              <div className="flex items-center gap-2 px-3 sm:px-3.5 py-2 bg-zinc-800/80 rounded-xl border border-white/5 text-xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-zinc-400 hidden md:inline">Caja:</span>
-                <span className="font-bold text-white max-w-[90px] sm:max-w-none truncate">{user.name}</span>
+                <span className="font-bold text-white max-w-[70px] sm:max-w-none truncate">{user.name}</span>
               </div>
             )}
 
@@ -608,7 +608,7 @@ export default function CajaPage() {
               className="flex items-center gap-2 px-3 py-2 bg-zinc-800 hover:bg-zinc-750 text-xs font-semibold rounded-xl border border-white/5 text-zinc-300 transition-colors"
             >
               <RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-primary' : ''}`} />
-              Actualizar
+              <span className="hidden sm:inline">Actualizar</span>
             </button>
 
             {user?.role_id === 1 && (
@@ -684,10 +684,10 @@ export default function CajaPage() {
         </div>
 
         {/* Tab buttons */}
-        <div className="flex gap-3 mb-6 border-b border-white/10 pb-4">
+        <div className="flex gap-2 sm:gap-3 mb-6 border-b border-white/10 pb-4 overflow-x-auto custom-scrollbar">
           <button
             onClick={() => setActiveTab("pendientes")}
-            className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
+            className={`shrink-0 whitespace-nowrap px-4 sm:px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
               activeTab === "pendientes"
                 ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                 : "bg-zinc-900 text-zinc-400 hover:text-white border border-white/5"
@@ -698,7 +698,7 @@ export default function CajaPage() {
           </button>
           <button
             onClick={() => setActiveTab("historial")}
-            className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
+            className={`shrink-0 whitespace-nowrap px-4 sm:px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 ${
               activeTab === "historial"
                 ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                 : "bg-zinc-900 text-zinc-400 hover:text-white border border-white/5"
@@ -760,8 +760,8 @@ export default function CajaPage() {
 
         {/* Content Tab: Historial */}
         {activeTab === "historial" && (
-          <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-6 overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="bg-zinc-900/40 border border-white/5 rounded-3xl p-4 sm:p-6 table-scroll">
+            <table className="w-full min-w-[860px] text-left border-collapse">
               <thead>
                 <tr className="border-b border-white/10 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                   <th className="pb-4 px-4">ID Pago</th>
@@ -815,9 +815,9 @@ export default function CajaPage() {
               className="bg-zinc-900 border border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
             >
               {/* Header */}
-              <div className="p-6 border-b border-white/10 flex justify-between items-center bg-zinc-950/50">
-                <div>
-                  <h3 className="text-xl font-bold flex items-center gap-2">
+              <div className="p-4 sm:p-6 border-b border-white/10 flex justify-between items-start gap-3 bg-zinc-950/50">
+                <div className="min-w-0">
+                  <h3 className="text-lg sm:text-xl font-bold flex flex-wrap items-center gap-2">
                     Cobrar Mesa {selectedOrder.table_number}
                     <span className="text-xs px-2.5 py-1 rounded-full bg-primary/20 text-primary border border-primary/30">
                       Orden #{selectedOrder.id}
@@ -834,7 +834,7 @@ export default function CajaPage() {
               </div>
 
               {/* Body */}
-              <div className="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
                 {/* Desglose de Platos */}
                 <div>
                   <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Detalle del Consumo</h4>
@@ -883,7 +883,7 @@ export default function CajaPage() {
                           <option value="Yape">Yape</option>
                           <option value="Plin">Plin</option>
                         </select>
-                        <div className="relative w-32 shrink-0">
+                        <div className="relative w-24 sm:w-32 shrink-0">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-sm">S/</span>
                           <input
                             type="number"
@@ -937,7 +937,7 @@ export default function CajaPage() {
                           setComprobanteTipo(op.id as ComprobanteTipo);
                           setErrorDoc(null);
                         }}
-                        className={`p-3 rounded-2xl border text-xs font-bold transition-all ${comprobanteTipo === op.id
+                        className={`p-2 sm:p-3 rounded-2xl border text-[11px] sm:text-xs font-bold transition-all ${comprobanteTipo === op.id
                           ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
                           : "bg-zinc-950 text-zinc-400 border-white/5 hover:text-white hover:border-white/20"
                           }`}
@@ -1074,18 +1074,18 @@ export default function CajaPage() {
                 )}
 
                 {/* Total */}
-                <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex justify-between items-center">
+                <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-2">
                   <span className="font-bold text-base text-zinc-200">TOTAL A COBRAR</span>
-                  <span className="font-black text-3xl text-primary">S/ {selectedOrder.total_amount.toFixed(2)}</span>
+                  <span className="font-black text-2xl sm:text-3xl text-primary">S/ {selectedOrder.total_amount.toFixed(2)}</span>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="p-6 border-t border-white/10 bg-zinc-950/50 flex justify-end gap-3">
+              <div className="p-4 sm:p-6 border-t border-white/10 bg-zinc-950/50 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setSelectedOrder(null)}
-                  className="px-5 py-3 rounded-xl font-bold text-sm text-zinc-400 hover:text-white transition-colors"
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl font-bold text-sm text-zinc-400 hover:text-white transition-colors"
                 >
                   Cancelar
                 </button>
@@ -1097,7 +1097,7 @@ export default function CajaPage() {
                     (efectivoAplicado > 0 && parsedCash < efectivoAplicado)
                   }
                   onClick={handleProcessPayment}
-                  className="px-7 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold rounded-xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:pointer-events-none flex items-center gap-2"
+                  className="w-full sm:w-auto px-5 sm:px-7 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold rounded-xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
                 >
                   {isProcessing ? "Procesando..." : "Confirmar Pago & Emitir"}
                 </button>

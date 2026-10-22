@@ -157,7 +157,7 @@ export default function Cocina() {
             initial={{ opacity: 0, y: -50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-gradient-to-r from-amber-500 to-primary text-black font-extrabold px-6 py-3 rounded-full shadow-[0_0_30px_rgba(204,153,51,0.6)] flex items-center gap-3 border border-white/20"
+            className="fixed top-24 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg bg-gradient-to-r from-amber-500 to-primary text-black font-extrabold text-center text-sm sm:text-base px-4 sm:px-6 py-3 rounded-full shadow-[0_0_30px_rgba(204,153,51,0.6)] flex items-center justify-center gap-3 border border-white/20"
           >
             <BellRing className="w-5 h-5 animate-bounce" />
             <span>¡NUEVA ORDEN ENTRANDO A COCINA!</span>
@@ -174,7 +174,7 @@ export default function Cocina() {
             </Link>
             <div className="h-6 w-px bg-white/10 hidden sm:block" />
             <div>
-              <h1 className="font-bold text-lg sm:text-xl tracking-wide flex items-center gap-2 flex-wrap">
+              <h1 className="font-bold text-base sm:text-xl tracking-wide flex items-center gap-2 flex-wrap">
                 Panel de Cocina
                 <span className="hidden sm:inline-block text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                   En vivo
@@ -263,7 +263,7 @@ export default function Cocina() {
                   }`}
                 >
                   {/* Status Banner */}
-                  <div className={`px-5 py-3 border-b flex justify-between items-center ${
+                  <div className={`px-4 sm:px-5 py-3 border-b flex flex-wrap gap-2 justify-between items-center ${
                     order.status === "Preparando" ? "bg-primary/10 border-primary/20" : "bg-amber-500/10 border-amber-500/20"
                   }`}>
                     <div className="flex items-center gap-2">
@@ -303,7 +303,7 @@ export default function Cocina() {
                           {item.quantity}x
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-bold text-[15px] text-white">{item.name}</h3>
+                          <h3 className="font-bold text-[15px] text-white break-words">{item.name}</h3>
                           {item.notes && (
                             <p className="text-xs text-amber-300 mt-1.5 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20 font-medium">
                               ⚠️ Indicación: "{item.notes}"

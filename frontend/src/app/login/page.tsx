@@ -66,7 +66,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-foreground flex overflow-hidden selection:bg-primary/30">
+    <div className="min-h-screen bg-zinc-950 text-foreground flex overflow-x-hidden selection:bg-primary/30">
       
       {/* Left Side: Elegant Brand Imagery (Hidden on Mobile) */}
       <div className="hidden lg:flex w-1/2 relative bg-zinc-950 items-center justify-center">
@@ -105,7 +105,7 @@ export default function Login() {
       </div>
 
       {/* Right Side: Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8 relative">
         {/* Dynamic Background Glows */}
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-amber-600/10 rounded-full blur-[100px] pointer-events-none" />
@@ -122,7 +122,7 @@ export default function Login() {
           className="w-full max-w-md relative z-10"
         >
           <div className="mb-10 text-center lg:text-left">
-            <h2 className="text-3xl font-bold mb-2">Bienvenido de vuelta</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Bienvenido de vuelta</h2>
             <p className="text-zinc-400">Por favor, ingresa tus credenciales</p>
           </div>
 

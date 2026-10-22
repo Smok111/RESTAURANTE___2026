@@ -574,22 +574,22 @@ export default function FacturacionPage() {
     <div className="min-h-screen bg-zinc-950 print:bg-white text-foreground flex flex-col">
       {/* Barra Superior */}
       <header className="print:hidden border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-40 px-4 lg:px-8 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/dashboard" className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <Logo size="sm" />
-            <div>
-              <h1 className="text-lg font-bold text-white flex items-center gap-2">
-                <ReceiptText className="w-5 h-5 text-amber-500" />
-                Módulo de Facturación Electrónica SUNAT
+            <div className="hidden sm:block shrink-0"><Logo size="sm" /></div>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <ReceiptText className="w-5 h-5 text-amber-500 shrink-0" />
+                <span className="min-w-0 truncate">Módulo de Facturación Electrónica SUNAT</span>
               </h1>
-              <p className="text-xs text-zinc-400">Emisión de Boletas, Facturas y Control de Clientes</p>
+              <p className="text-[11px] sm:text-xs text-zinc-400 truncate">Emisión de Boletas, Facturas y Control de Clientes</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/caja"
               className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 font-semibold"
@@ -623,10 +623,10 @@ export default function FacturacionPage() {
 
       {/* Tabs */}
       <div className="print:hidden border-b border-zinc-800 bg-zinc-900/40">
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 flex gap-2">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 flex gap-2 overflow-x-auto custom-scrollbar">
           <button
             onClick={() => setTab("emitir")}
-            className={`py-3 px-4 text-sm font-semibold border-b-2 flex items-center gap-2 transition ${tab === "emitir"
+            className={`shrink-0 whitespace-nowrap py-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-2 transition ${tab === "emitir"
               ? "border-amber-500 text-amber-400 bg-amber-500/10"
               : "border-transparent text-zinc-400 hover:text-white"
               }`}
@@ -636,7 +636,7 @@ export default function FacturacionPage() {
           </button>
           <button
             onClick={() => setTab("historial")}
-            className={`py-3 px-4 text-sm font-semibold border-b-2 flex items-center gap-2 transition ${tab === "historial"
+            className={`shrink-0 whitespace-nowrap py-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-2 transition ${tab === "historial"
               ? "border-amber-500 text-amber-400 bg-amber-500/10"
               : "border-transparent text-zinc-400 hover:text-white"
               }`}
@@ -646,7 +646,7 @@ export default function FacturacionPage() {
           </button>
           <button
             onClick={() => setTab("clientes")}
-            className={`py-3 px-4 text-sm font-semibold border-b-2 flex items-center gap-2 transition ${tab === "clientes"
+            className={`shrink-0 whitespace-nowrap py-3 px-3 sm:px-4 text-xs sm:text-sm font-semibold border-b-2 flex items-center gap-2 transition ${tab === "clientes"
               ? "border-amber-500 text-amber-400 bg-amber-500/10"
               : "border-transparent text-zinc-400 hover:text-white"
               }`}
@@ -658,19 +658,19 @@ export default function FacturacionPage() {
       </div>
 
       {/* Contenido Principal */}
-      <main className="print:hidden flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8">
+      <main className="print:hidden flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 lg:p-8">
         {/* PESTAÑA 1: EMITIR COMPROBANTE */}
         {tab === "emitir" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Formulario */}
-            <div className="lg:col-span-7 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+            <div className="lg:col-span-7 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
               <form onSubmit={handleEmitir} className="space-y-6">
                 {/* Tipo de Comprobante */}
                 <div>
                   <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-2">
                     Tipo de Comprobante
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                     <button
                       type="button"
                       onClick={() => setTipoComprobante("boleta")}
@@ -705,8 +705,8 @@ export default function FacturacionPage() {
                     <span className="text-xs text-zinc-400">Serie: {serie}</span>
                   </div>
 
-                  <div className="flex gap-2">
-                    <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1 min-w-0">
                       <label className="text-xs text-zinc-400 block mb-1">
                         {tipoComprobante === "boleta" ? "DNI (8 dígitos)" : "RUC (11 dígitos)"}
                       </label>
@@ -724,7 +724,7 @@ export default function FacturacionPage() {
                         type="button"
                         onClick={handleConsultarDocumento}
                         disabled={consultandoDoc}
-                        className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-lg text-xs font-bold text-white flex items-center gap-1.5 h-[42px] transition disabled:opacity-50"
+                        className="w-full sm:w-auto px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1.5 h-[42px] transition disabled:opacity-50"
                       >
                         {consultandoDoc ? (
                           <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
@@ -1026,7 +1026,7 @@ export default function FacturacionPage() {
         {/* PESTAÑA 2: HISTORIAL DE COMPROBANTES */}
         {tab === "historial" && (
           <div className="space-y-6">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
                   <h2 className="text-lg font-bold text-white">Comprobantes Emitidos</h2>
@@ -1041,8 +1041,8 @@ export default function FacturacionPage() {
                 </button>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+              <div className="table-scroll">
+                <table className="w-full min-w-[900px] text-left text-sm">
                   <thead className="bg-zinc-950/70 text-zinc-400 text-xs uppercase border-b border-zinc-800">
                     <tr>
                       <th className="py-3 px-4">Comprobante</th>
@@ -1225,7 +1225,7 @@ export default function FacturacionPage() {
         {tab === "clientes" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Formulario nuevo cliente */}
-            <div className="lg:col-span-5 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+            <div className="lg:col-span-5 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
               <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
                 <User className="w-5 h-5 text-amber-500" />
                 Registrar Cliente
@@ -1298,7 +1298,7 @@ export default function FacturacionPage() {
             </div>
 
             {/* Listado de clientes */}
-            <div className="lg:col-span-7 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+            <div className="lg:col-span-7 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
               <h2 className="text-lg font-bold text-white mb-4">Directorio de Clientes Guardados</h2>
               <div className="space-y-3">
                 {clientes.map((c) => (
@@ -1306,16 +1306,16 @@ export default function FacturacionPage() {
                     key={c.id}
                     className="p-4 bg-zinc-950/70 border border-zinc-800 rounded-xl flex items-center justify-between gap-4"
                   >
-                    <div className="space-y-1">
-                      <div className="font-bold text-white text-sm">{c.nombre}</div>
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="font-bold text-white text-sm truncate">{c.nombre}</div>
                       <div className="text-xs text-zinc-400 flex flex-wrap gap-x-4">
                         {c.dni && <span>DNI: <strong className="text-zinc-300 font-mono">{c.dni}</strong></span>}
                         {c.ruc && <span>RUC: <strong className="text-zinc-300 font-mono">{c.ruc}</strong></span>}
                         {c.telefono && <span>Tel: {c.telefono}</span>}
                       </div>
-                      {c.direccion && <div className="text-xs text-zinc-500">{c.direccion}</div>}
+                      {c.direccion && <div className="text-xs text-zinc-500 truncate">{c.direccion}</div>}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => {
                           setDocumentoNumero(c.ruc || c.dni || "");

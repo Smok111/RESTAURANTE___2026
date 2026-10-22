@@ -2,7 +2,7 @@
 
 import { apiFetch } from "@/lib/api";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { 
   ArrowLeft, 
   ShoppingCart, 
@@ -27,7 +27,7 @@ import {
   LayoutDashboard
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
 
@@ -93,6 +93,7 @@ function playDing() {
 
 function PedidosContent() {
   const searchParams = useSearchParams();
+  const shouldReduceMotion = useReducedMotion();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [tables, setTables] = useState<TableStatus[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | "all">("all");
@@ -101,6 +102,8 @@ function PedidosContent() {
   const [tableNumber, setTableNumber] = useState<string>("1");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+  const [addedItemId, setAddedItemId] = useState<number | null>(null);
+  const addedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Vista: "plano" (Mapa grande de mesas) o "carta" (Toma de pedidos)
   const [viewMode, setViewMode] = useState<"plano" | "carta">("plano");
@@ -130,6 +133,18 @@ function PedidosContent() {
     setServidoToast({ mesa, id });
     setTimeout(() => setServidoToast(null), 3000);
   };
+
+  const flashAdded = (itemId: number) => {
+    setAddedItemId(itemId);
+    if (addedTimerRef.current) clearTimeout(addedTimerRef.current);
+    addedTimerRef.current = setTimeout(() => setAddedItemId(null), 900);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (addedTimerRef.current) clearTimeout(addedTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -207,6 +222,7 @@ function PedidosContent() {
       setExtraNote("");
     } else {
       addToCart(item, "");
+      flashAdded(item.id);
     }
   };
 
@@ -216,6 +232,7 @@ function PedidosContent() {
       ? `Entrada: ${entradaChoice} | ${extraNote.trim()}`
       : `Entrada: ${entradaChoice}`;
     addToCart(menuItemForEntrada, finalNote);
+    flashAdded(menuItemForEntrada.id);
     setMenuItemForEntrada(null);
   };
 
@@ -250,6 +267,7 @@ function PedidosContent() {
   };
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalUnits = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const submitOrder = async () => {
     if (cart.length === 0) return;
@@ -313,7 +331,7 @@ function PedidosContent() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className="fixed top-6 right-6 z-[9999] flex items-center gap-3 px-5 py-4 rounded-2xl bg-emerald-500 text-black shadow-[0_8px_32px_rgba(16,185,129,0.45)] border border-emerald-400"
+            className="fixed top-6 left-4 right-4 sm:left-auto sm:right-6 z-[9999] max-w-[calc(100vw-2rem)] sm:max-w-md flex items-center gap-3 px-4 sm:px-5 py-4 rounded-2xl bg-emerald-500 text-black shadow-[0_8px_32px_rgba(16,185,129,0.45)] border border-emerald-400"
           >
             <CheckCircle2 className="w-5 h-5 shrink-0" />
             <div>
@@ -351,28 +369,46 @@ function PedidosContent() {
 
           {/* Selector de Modos: Plano vs Carta */}
           <div className="order-last w-full sm:order-none sm:w-auto flex items-center bg-zinc-950 p-1.5 rounded-2xl border border-white/10">
-            <button
+            <motion.button
+              type="button"
               onClick={() => setViewMode("plano")}
-              className={`flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                viewMode === "plano"
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                  : "text-zinc-400 hover:text-white"
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+              className={`relative flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-colors ${
+                viewMode === "plano" ? "text-primary-foreground" : "text-zinc-400 hover:text-white"
               }`}
             >
-              <Grid3X3 className="w-4 h-4" />
-              <span>Plano de Mesas</span>
-            </button>
-            <button
+              {viewMode === "plano" && (
+                <motion.span
+                  layoutId={shouldReduceMotion ? undefined : "view-mode-pill"}
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  className="absolute inset-0 rounded-xl bg-primary shadow-lg shadow-primary/25"
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-2">
+                <Grid3X3 className="w-4 h-4" />
+                <span>Plano de Mesas</span>
+              </span>
+            </motion.button>
+            <motion.button
+              type="button"
               onClick={() => setViewMode("carta")}
-              className={`flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                viewMode === "carta"
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                  : "text-zinc-400 hover:text-white"
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+              className={`relative flex-1 sm:flex-none justify-center flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-colors ${
+                viewMode === "carta" ? "text-primary-foreground" : "text-zinc-400 hover:text-white"
               }`}
             >
-              <ShoppingCart className="w-4 h-4" />
-              <span className="whitespace-nowrap">Tomar Pedido (Mesa {tableNumber})</span>
-            </button>
+              {viewMode === "carta" && (
+                <motion.span
+                  layoutId={shouldReduceMotion ? undefined : "view-mode-pill"}
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  className="absolute inset-0 rounded-xl bg-primary shadow-lg shadow-primary/25"
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4" />
+                <span className="whitespace-nowrap">Tomar Pedido (Mesa {tableNumber})</span>
+              </span>
+            </motion.button>
           </div>
 
           <div className="flex items-center gap-3">
@@ -400,7 +436,7 @@ function PedidosContent() {
                 localStorage.removeItem("user");
                 window.location.href = "/login";
               }}
-              className="text-xs px-3 py-2 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors font-semibold flex items-center gap-1.5 cursor-pointer"
+              className="text-xs px-3 py-2 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-all active:scale-95 font-semibold flex items-center gap-1.5 cursor-pointer"
               title="Cerrar sesión"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -454,7 +490,7 @@ function PedidosContent() {
                     });
                     loadData();
                   }}
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs rounded-xl transition-all active:scale-95 shadow-md flex items-center gap-2 cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4" /> Mesa {ro.table_number}: Servido ✓
                 </button>
@@ -587,13 +623,15 @@ function PedidosContent() {
               </div>
 
               {/* Botón para cambiar de mesa */}
-              <button
+              <motion.button
+                type="button"
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
                 onClick={() => setViewMode("plano")}
                 className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border border-white/5"
               >
                 <Grid3X3 className="w-4 h-4 text-primary" />
                 Cambiar de Mesa en el Plano
-              </button>
+              </motion.button>
             </div>
 
             {/* Selector de Mesas Rápido (Espacioso, no apretado) */}
@@ -608,13 +646,16 @@ function PedidosContent() {
                   const st = tbl?.status || "Libre";
 
                   return (
-                    <button
+                    <motion.button
                       key={num}
                       type="button"
+                      whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
+                      animate={shouldReduceMotion ? undefined : { scale: isSel ? 1.05 : 1 }}
+                      transition={{ type: "spring", stiffness: 420, damping: 30 }}
                       onClick={() => setTableNumber(num.toString())}
                       className={`py-2.5 rounded-xl font-black text-xs transition-all border ${
                         isSel
-                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30 scale-105"
+                          ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30"
                           : st === "Libre"
                           ? "bg-zinc-900/60 text-zinc-300 border-emerald-500/20 hover:border-emerald-500/50"
                           : st === "Ocupada"
@@ -623,7 +664,7 @@ function PedidosContent() {
                       }`}
                     >
                       M{num}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -636,8 +677,10 @@ function PedidosContent() {
                 {/* Categorías */}
                 <div className="flex gap-2 overflow-x-auto pb-4 mb-6 custom-scrollbar">
                   {categories.map((cat) => (
-                    <button
+                    <motion.button
                       key={cat.id}
+                      type="button"
+                      whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
                       onClick={() => setSelectedCategory(cat.id as any)}
                       className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                         selectedCategory === cat.id
@@ -646,7 +689,7 @@ function PedidosContent() {
                       }`}
                     >
                       {cat.name}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
 
@@ -705,17 +748,45 @@ function PedidosContent() {
                             </div>
 
                             {item.is_available ? (
-                              <button 
+                              <motion.button
+                                type="button"
                                 onClick={() => handleItemClick(item)}
+                                whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
+                                whileHover={shouldReduceMotion ? undefined : { scale: 1.01 }}
                                 className={`w-full py-2.5 rounded-xl border transition-all font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-sm ${
-                                  isMenuDia
+                                  addedItemId === item.id
+                                    ? "bg-emerald-500 text-black border-emerald-400 shadow-emerald-500/30"
+                                    : isMenuDia
                                     ? "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500 hover:text-black"
                                     : "border-white/10 hover:bg-primary hover:text-primary-foreground hover:border-primary text-zinc-200"
                                 }`}
                               >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>{isMenuDia ? "Elegir Entrada & Pedir" : "Agregar al Pedido"}</span>
-                              </button>
+                                <AnimatePresence mode="wait" initial={false}>
+                                  {addedItemId === item.id ? (
+                                    <motion.span
+                                      key="added"
+                                      initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={shouldReduceMotion ? undefined : { opacity: 0, y: -4 }}
+                                      className="flex items-center gap-1.5"
+                                    >
+                                      <Check className="w-3.5 h-3.5" />
+                                      <span>Agregado</span>
+                                    </motion.span>
+                                  ) : (
+                                    <motion.span
+                                      key="idle"
+                                      initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={shouldReduceMotion ? undefined : { opacity: 0, y: -4 }}
+                                      className="flex items-center gap-1.5"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                      <span>{isMenuDia ? "Elegir Entrada & Pedir" : "Agregar al Pedido"}</span>
+                                    </motion.span>
+                                  )}
+                                </AnimatePresence>
+                              </motion.button>
                             ) : (
                               <div className="w-full py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-bold text-xs text-center">
                                 Agotado
@@ -735,8 +806,22 @@ function PedidosContent() {
                 <div className="sticky top-28 bg-zinc-900/90 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl backdrop-blur-xl">
                   <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-primary/20 rounded-xl">
+                      <div className="relative p-2.5 bg-primary/20 rounded-xl">
                         <ShoppingCart className="w-5 h-5 text-primary" />
+                        <AnimatePresence>
+                          {totalUnits > 0 && (
+                            <motion.span
+                              key={totalUnits}
+                              initial={shouldReduceMotion ? false : { scale: 0.4, opacity: 0 }}
+                              animate={{ scale: shouldReduceMotion ? 1 : [1.3, 1], opacity: 1 }}
+                              exit={shouldReduceMotion ? undefined : { scale: 0.4, opacity: 0 }}
+                              transition={{ type: "spring", stiffness: 500, damping: 18 }}
+                              className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-black flex items-center justify-center shadow-lg shadow-primary/30"
+                            >
+                              {totalUnits}
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
                       </div>
                       <div>
                         <h2 className="text-xl font-black">Comanda Actual</h2>
@@ -744,22 +829,31 @@ function PedidosContent() {
                       </div>
                     </div>
                     {cart.length > 0 && (
-                      <button onClick={() => setCart([])} className="text-xs text-zinc-500 hover:text-red-400 font-semibold">
+                      <motion.button
+                        type="button"
+                        whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
+                        onClick={() => setCart([])}
+                        className="text-xs text-zinc-500 hover:text-red-400 font-semibold px-2 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                      >
                         Vaciar
-                      </button>
+                      </motion.button>
                     )}
                   </div>
 
                   {successMsg ? (
-                    <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 p-5 rounded-2xl text-center mb-6">
+                    <motion.div
+                      initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 p-5 rounded-2xl text-center mb-6"
+                    >
                       <p className="font-bold text-sm mb-2">{successMsg}</p>
                       <button 
                         onClick={() => { setSuccessMsg(""); setViewMode("plano"); }}
-                        className="mt-2 text-xs font-bold underline hover:text-emerald-300"
+                        className="mt-2 text-xs font-bold underline hover:text-emerald-300 active:scale-95 transition-transform"
                       >
                         Volver al plano de mesas
                       </button>
-                    </div>
+                    </motion.div>
                   ) : cart.length === 0 ? (
                     <div className="text-center py-12 text-muted-foreground text-sm">
                       La comanda está vacía.<br/>Agrega platos de la carta para Mesa {tableNumber}.
@@ -767,52 +861,104 @@ function PedidosContent() {
                   ) : (
                     <div className="flex flex-col gap-6">
                       <div className="flex flex-col gap-3 max-h-[38vh] overflow-y-auto pr-1 custom-scrollbar">
-                        {cart.map(item => (
-                          <div key={item.cartKey} className="bg-zinc-950/70 p-3.5 rounded-2xl border border-white/5">
-                            <div className="flex justify-between items-start mb-1.5">
-                              <div>
-                                <span className="font-bold text-sm text-white block">{item.name}</span>
-                                {item.notes && (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 mt-1">
-                                    <Soup className="w-3 h-3 text-amber-400" />
-                                    {item.notes}
-                                  </span>
-                                )}
+                        <AnimatePresence initial={false} mode="popLayout">
+                          {cart.map(item => (
+                            <motion.div
+                              layout
+                              key={item.cartKey}
+                              initial={shouldReduceMotion ? false : { opacity: 0, y: 12, scale: 0.98 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={shouldReduceMotion ? undefined : { opacity: 0, x: -20, scale: 0.98 }}
+                              transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                              className="bg-zinc-950/70 p-3.5 rounded-2xl border border-white/5"
+                            >
+                              <div className="flex justify-between items-start mb-1.5">
+                                <div>
+                                  <span className="font-bold text-sm text-white block">{item.name}</span>
+                                  {item.notes && (
+                                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20 mt-1">
+                                      <Soup className="w-3 h-3 text-amber-400" />
+                                      {item.notes}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-primary font-black text-sm whitespace-nowrap ml-2">
+                                  S/ {(item.price * item.quantity).toFixed(2)}
+                                </span>
                               </div>
-                              <span className="text-primary font-black text-sm whitespace-nowrap ml-2">
-                                S/ {(item.price * item.quantity).toFixed(2)}
-                              </span>
-                            </div>
 
-                            <div className="flex items-center gap-2 mt-2">
-                              <div className="flex items-center gap-1.5 bg-zinc-900 rounded-lg p-1 border border-white/5">
-                                <button onClick={() => updateQuantity(item.cartKey, -1)} className="p-1 hover:text-primary"><Minus className="w-3 h-3" /></button>
-                                <span className="w-5 text-center font-bold text-xs">{item.quantity}</span>
-                                <button onClick={() => updateQuantity(item.cartKey, 1)} className="p-1 hover:text-primary"><Plus className="w-3 h-3" /></button>
+                              <div className="flex items-center gap-1 mt-2">
+                                <div className="flex items-center gap-0.5 bg-zinc-900 rounded-lg p-0.5 border border-white/5">
+                                  <motion.button
+                                    type="button"
+                                    whileTap={shouldReduceMotion ? undefined : { scale: 0.8 }}
+                                    onClick={() => updateQuantity(item.cartKey, -1)}
+                                    className="h-11 w-11 sm:h-8 sm:w-8 flex items-center justify-center rounded-md hover:text-primary hover:bg-white/5 transition-colors"
+                                    aria-label={`Quitar una unidad de ${item.name}`}
+                                  >
+                                    <Minus className="w-3.5 h-3.5" />
+                                  </motion.button>
+                                  <AnimatePresence mode="popLayout" initial={false}>
+                                    <motion.span
+                                      key={item.quantity}
+                                      initial={shouldReduceMotion ? false : { opacity: 0, y: -6 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      exit={shouldReduceMotion ? undefined : { opacity: 0, y: 6 }}
+                                      className="w-6 text-center font-bold text-xs"
+                                    >
+                                      {item.quantity}
+                                    </motion.span>
+                                  </AnimatePresence>
+                                  <motion.button
+                                    type="button"
+                                    whileTap={shouldReduceMotion ? undefined : { scale: 0.8 }}
+                                    onClick={() => updateQuantity(item.cartKey, 1)}
+                                    className="h-11 w-11 sm:h-8 sm:w-8 flex items-center justify-center rounded-md hover:text-primary hover:bg-white/5 transition-colors"
+                                    aria-label={`Agregar una unidad de ${item.name}`}
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </motion.button>
+                                </div>
+                                <motion.button
+                                  type="button"
+                                  whileTap={shouldReduceMotion ? undefined : { scale: 0.85 }}
+                                  onClick={() => removeItem(item.cartKey)}
+                                  className="h-11 w-11 sm:h-9 sm:w-9 flex items-center justify-center rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors ml-auto"
+                                  aria-label={`Eliminar ${item.name} de la comanda`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </motion.button>
                               </div>
-                              <button onClick={() => removeItem(item.cartKey)} className="text-red-400 hover:text-red-300 p-1 ml-auto">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                            <input 
-                              type="text" 
-                              placeholder="Editar indicación (ej. bien dorado, sin sal)" 
-                              value={item.notes}
-                              onChange={(e) => updateNotes(item.cartKey, e.target.value)}
-                              className="mt-2.5 w-full text-xs bg-zinc-900 border border-white/5 rounded-lg px-3 py-2 focus:outline-none focus:border-primary/50 text-white placeholder:text-zinc-600"
-                            />
-                          </div>
-                        ))}
+                              <input
+                                type="text"
+                                placeholder="Editar indicación (ej. bien dorado, sin sal)"
+                                value={item.notes}
+                                onChange={(e) => updateNotes(item.cartKey, e.target.value)}
+                                className="mt-2.5 w-full text-xs bg-zinc-900 border border-white/5 rounded-lg px-3 py-2 focus:outline-none focus:border-primary/50 text-white placeholder:text-zinc-600"
+                              />
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
 
                       </div>
 
                       <div className="border-t border-white/5 pt-4 space-y-4">
                         <div className="flex justify-between items-center">
                           <span className="font-bold text-sm text-zinc-400">Total Comanda</span>
-                          <span className="text-primary text-2xl font-black">S/ {total.toFixed(2)}</span>
+                          <motion.span
+                            key={total.toFixed(2)}
+                            initial={shouldReduceMotion ? false : { scale: 1.15 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                            className="text-primary text-2xl font-black"
+                          >
+                            S/ {total.toFixed(2)}
+                          </motion.span>
                         </div>
 
-                        <button 
+                        <motion.button
+                          type="button"
+                          whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                           onClick={submitOrder}
                           disabled={isSubmitting}
                           className="w-full bg-primary text-primary-foreground font-extrabold py-4 rounded-2xl hover:bg-primary/90 transition-all shadow-[0_0_20px_rgba(204,153,51,0.3)] hover:shadow-[0_0_30px_rgba(204,153,51,0.5)] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
@@ -822,7 +968,7 @@ function PedidosContent() {
                           ) : (
                             `Enviar a Cocina (Mesa ${tableNumber})`
                           )}
-                        </button>
+                        </motion.button>
                       </div>
                     </div>
                   )}
@@ -851,12 +997,15 @@ function PedidosContent() {
                   </span>
                   <h3 className="text-xl font-black text-white mt-2">{menuItemForEntrada.name}</h3>
                 </div>
-                <button 
+                <motion.button
+                  type="button"
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.9 }}
                   onClick={() => setMenuItemForEntrada(null)} 
-                  className="p-1 rounded-lg text-zinc-400 hover:text-white"
+                  className="h-11 w-11 -m-2 flex items-center justify-center rounded-xl text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                  aria-label="Cerrar"
                 >
                   <X className="w-5 h-5" />
-                </button>
+                </motion.button>
               </div>
 
               <p className="text-xs text-zinc-300 mb-4">
@@ -864,8 +1013,9 @@ function PedidosContent() {
               </p>
 
               <div className="space-y-2.5 mb-5">
-                <button
+                <motion.button
                   type="button"
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                   onClick={() => setEntradaChoice("Sopa del Día")}
                   className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                     entradaChoice === "Sopa del Día"
@@ -881,14 +1031,20 @@ function PedidosContent() {
                     </div>
                   </div>
                   {entradaChoice === "Sopa del Día" && (
-                    <div className="w-5 h-5 rounded-full bg-amber-500 text-black flex items-center justify-center">
+                    <motion.div
+                      initial={shouldReduceMotion ? false : { scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                      className="w-5 h-5 rounded-full bg-amber-500 text-black flex items-center justify-center"
+                    >
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    </div>
+                    </motion.div>
                   )}
-                </button>
+                </motion.button>
 
-                <button
+                <motion.button
                   type="button"
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                   onClick={() => setEntradaChoice("Papa a la Huancaína")}
                   className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                     entradaChoice === "Papa a la Huancaína"
@@ -904,11 +1060,16 @@ function PedidosContent() {
                     </div>
                   </div>
                   {entradaChoice === "Papa a la Huancaína" && (
-                    <div className="w-5 h-5 rounded-full bg-amber-500 text-black flex items-center justify-center">
+                    <motion.div
+                      initial={shouldReduceMotion ? false : { scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                      className="w-5 h-5 rounded-full bg-amber-500 text-black flex items-center justify-center"
+                    >
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
-                    </div>
+                    </motion.div>
                   )}
-                </button>
+                </motion.button>
               </div>
 
               <div className="mb-6">
@@ -925,20 +1086,22 @@ function PedidosContent() {
               </div>
 
               <div className="flex gap-3">
-                <button
+                <motion.button
                   type="button"
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
                   onClick={() => setMenuItemForEntrada(null)}
                   className="flex-1 py-3 bg-zinc-800 text-zinc-300 font-bold rounded-xl text-xs hover:bg-zinc-700 transition-colors"
                 >
                   Cancelar
-                </button>
-                <button
+                </motion.button>
+                <motion.button
                   type="button"
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
                   onClick={confirmEntradaModal}
                   className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-extrabold rounded-xl text-xs transition-all shadow-md shadow-amber-500/20 cursor-pointer"
                 >
                   Agregar Menú S/ 10.00
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           </div>
@@ -951,13 +1114,15 @@ function PedidosContent() {
 
 // Componente de Tarjeta Grande para cada Mesa en el Plano
 function TableCardBig({ tbl, userRole, onSelect }: { tbl: TableStatus; userRole?: number; onSelect: () => void }) {
+  const shouldReduceMotion = useReducedMotion();
   const isLibre = tbl.status === "Libre";
   const isOcupada = tbl.status === "Ocupada";
   const isPorCobrar = tbl.status === "Por Cobrar";
 
   return (
     <motion.div
-      whileHover={{ scale: 1.03 }}
+      whileHover={shouldReduceMotion ? undefined : { scale: 1.03 }}
+      whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
       className={`p-6 rounded-3xl border flex flex-col justify-between transition-all relative overflow-hidden shadow-xl min-h-[210px] ${
         isLibre
           ? "bg-zinc-900/60 border-emerald-500/30 hover:border-emerald-500/60 shadow-[0_0_20px_rgba(16,185,129,0.06)]"
@@ -1009,24 +1174,28 @@ function TableCardBig({ tbl, userRole, onSelect }: { tbl: TableStatus; userRole?
       {/* Botón de acción grande */}
       <div>
         {isLibre ? (
-          <button
+          <motion.button
+            type="button"
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
             onClick={onSelect}
             className="w-full py-3.5 bg-emerald-500/20 hover:bg-emerald-500 text-emerald-400 hover:text-black font-extrabold rounded-2xl text-xs transition-all flex items-center justify-center gap-2 border border-emerald-500/30 hover:scale-[1.02]"
           >
             <Plus className="w-4 h-4" /> Tomar Pedido ➔
-          </button>
+          </motion.button>
         ) : isPorCobrar ? (
           <div className="flex gap-2">
-            <button
+            <motion.button
+              type="button"
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
               onClick={onSelect}
               className="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-2xl text-xs transition-colors"
             >
               Ver Pedido
-            </button>
+            </motion.button>
             {userRole === 1 ? (
               <Link
                 href="/caja"
-                className="flex-1 py-3 bg-blue-500 hover:bg-blue-400 text-black font-extrabold rounded-2xl text-xs transition-colors flex items-center justify-center gap-1 shadow-md shadow-blue-500/20"
+                className="flex-1 py-3 bg-blue-500 hover:bg-blue-400 text-black font-extrabold rounded-2xl text-xs transition-all active:scale-95 flex items-center justify-center gap-1 shadow-md shadow-blue-500/20"
               >
                 <Receipt className="w-3.5 h-3.5" /> Cobrar
               </Link>
@@ -1040,12 +1209,14 @@ function TableCardBig({ tbl, userRole, onSelect }: { tbl: TableStatus; userRole?
             )}
           </div>
         ) : (
-          <button
+          <motion.button
+            type="button"
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
             onClick={onSelect}
             className="w-full py-3.5 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black font-extrabold rounded-2xl text-xs transition-all flex items-center justify-center gap-2 border border-amber-500/30"
           >
             <Plus className="w-4 h-4" /> Agregar más platos
-          </button>
+          </motion.button>
         )}
       </div>
     </motion.div>

@@ -198,22 +198,22 @@ export default function MenuDiarioPage() {
     <div className="min-h-screen bg-zinc-950 text-foreground flex flex-col">
       {/* Encabezado */}
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-40 px-4 lg:px-8 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link href="/dashboard" className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/dashboard" className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <Logo size="sm" />
-            <div>
-              <h1 className="text-lg font-bold text-white flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-amber-500" />
-                Gestión de Menú Diario Configurable
+            <div className="hidden sm:block shrink-0"><Logo size="sm" /></div>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-amber-500 shrink-0" />
+                <span className="min-w-0 truncate">Gestión de Menú Diario Configurable</span>
               </h1>
-              <p className="text-xs text-zinc-400">Pizarra de Menús del Día a S/ 10.00 con Entradas Incluidas</p>
+              <p className="text-[11px] sm:text-xs text-zinc-400 truncate">Pizarra de Menús del Día a S/ 10.00 con Entradas Incluidas</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/pedidos"
               className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 font-semibold"
@@ -232,7 +232,7 @@ export default function MenuDiarioPage() {
       </header>
 
       {/* Contenido Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 lg:p-8 space-y-8">
         {error && (
           <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-2xl p-4 text-sm">
             {error}
@@ -245,8 +245,8 @@ export default function MenuDiarioPage() {
         )}
 
         {/* Barra de Fechas y Acciones de Día */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full md:w-auto">
             <label className="text-sm font-bold text-zinc-300">Fecha del Menú:</label>
             <input
               type="date"
@@ -290,7 +290,7 @@ export default function MenuDiarioPage() {
               Eliminar
             </button>
 
-            <div className="flex items-center gap-2 bg-zinc-950 px-3 py-1.5 rounded-xl border border-zinc-800">
+            <div className="flex flex-wrap items-center gap-2 bg-zinc-950 px-3 py-1.5 rounded-xl border border-zinc-800">
               <span className="text-xs text-zinc-400">Copiar a:</span>
               <input
                 type="date"
@@ -313,7 +313,7 @@ export default function MenuDiarioPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Entradas Incluidas */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
               <div className="flex items-center gap-2">
                 <Soup className="w-5 h-5 text-amber-500" />
                 <h2 className="text-base font-bold text-white">Entradas a Elegir</h2>
@@ -371,7 +371,7 @@ export default function MenuDiarioPage() {
 
           {/* Segundos del Día */}
           <div className="lg:col-span-8 space-y-6">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <UtensilsCrossed className="w-5 h-5 text-amber-500" />

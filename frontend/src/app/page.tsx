@@ -410,7 +410,7 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <main className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 px-6">
+      <main className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 px-4 sm:px-6">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] opacity-50 pointer-events-none" />
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-amber-600/10 rounded-full blur-[100px] opacity-30 pointer-events-none" />
 
@@ -428,7 +428,7 @@ export default function Home() {
               </span>
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-black leading-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black leading-tight">
               Auténtico Sabor <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600">
                 Chugurano &amp; Peruano
@@ -492,7 +492,7 @@ export default function Home() {
               <motion.div 
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -left-6 top-16 bg-background/90 backdrop-blur-xl border border-amber-500/30 px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-4"
+                className="absolute left-0 sm:-left-6 top-16 bg-background/90 backdrop-blur-xl border border-amber-500/30 px-4 sm:px-6 py-3 sm:py-4 rounded-3xl shadow-2xl flex items-center gap-3 sm:gap-4"
               >
                 <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center">
                   <Flame className="w-6 h-6 text-amber-400" />
@@ -506,7 +506,7 @@ export default function Home() {
               <motion.div 
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -right-6 bottom-16 bg-background/90 backdrop-blur-xl border border-emerald-500/30 px-6 py-4 rounded-3xl shadow-2xl flex items-center gap-4"
+                className="absolute right-0 sm:-right-6 bottom-16 bg-background/90 backdrop-blur-xl border border-emerald-500/30 px-4 sm:px-6 py-3 sm:py-4 rounded-3xl shadow-2xl flex items-center gap-3 sm:gap-4"
               >
                 <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
                   <CheckCircle2 className="w-6 h-6 text-emerald-400" />
@@ -523,7 +523,7 @@ export default function Home() {
 
       {/* SECCIÓN ESPECIAL: MENÚ DEL DÍA CON ENTRADA INCLUIDA (S/ 10.00) */}
       <section className="py-20 bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 border-t border-b border-amber-500/20 relative z-10" id="menu-del-dia">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-3xl mx-auto mb-14">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-wider mb-4">
               <Sparkles className="w-4 h-4 text-amber-400" /> Promoción Principal de la Casa
@@ -651,7 +651,7 @@ export default function Home() {
 
       {/* SECCIÓN CARTA & MENÚ COMPLETA (Para los clientes) */}
       <section className="py-24 bg-zinc-950 border-t border-white/5 relative z-10" id="menu">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold uppercase tracking-wider mb-3">
@@ -729,7 +729,7 @@ export default function Home() {
                       
                       {/* Badge de Menú del Día */}
                       {isMenuDia && (
-                        <div className="absolute top-4 left-4 bg-gradient-to-r from-amber-500 to-amber-600 text-black px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1">
+                        <div className="absolute top-4 left-4 max-w-[70%] leading-tight bg-gradient-to-r from-amber-500 to-amber-600 text-black px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider shadow-lg flex items-center gap-1">
                           <Star className="w-3 h-3 fill-black" />
                           <span>Inc. Entrada (Sopa o Huancaína)</span>
                         </div>
@@ -774,7 +774,7 @@ export default function Home() {
       {/* SECCIÓN NOSOTROS */}
       <section className="py-24 relative z-10 overflow-hidden" id="nosotros">
         <div className="absolute top-1/2 right-0 w-[600px] h-[600px] bg-amber-500/5 rounded-full blur-[100px] pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid md:grid-cols-2 gap-16 items-center">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -816,7 +816,7 @@ export default function Home() {
 
       {/* SECCIÓN RESERVAS */}
       <section className="py-24 bg-zinc-950 border-t border-white/5 relative z-10" id="reservas">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -845,7 +845,7 @@ export default function Home() {
                     <CheckCircle2 className="w-10 h-10" />
                   </div>
 
-                  <h3 className="text-3xl font-black text-white mb-2">¡Reserva Confirmada con Éxito!</h3>
+                  <h3 className="text-2xl sm:text-3xl font-black text-white mb-2">¡Reserva Confirmada con Éxito!</h3>
                   <p className="text-zinc-400 text-sm max-w-md mx-auto mb-8">
                     Te esperamos en <strong className="text-white">Sabor Chugurano</strong>. Hemos separado tu mesa para la fecha y hora seleccionada.
                   </p>
@@ -891,7 +891,7 @@ export default function Home() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-zinc-900/60 border border-white/10 rounded-3xl p-8 lg:p-12 shadow-2xl backdrop-blur-md"
+                  className="bg-zinc-900/60 border border-white/10 rounded-3xl p-5 sm:p-8 lg:p-12 shadow-2xl backdrop-blur-md"
                 >
                   {!loggedUser ? (
                     <div className="text-center py-8">
@@ -1050,14 +1050,14 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="py-12 border-t border-white/5 bg-zinc-950 text-zinc-400 text-xs relative z-10">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-4">
             <Logo size={40} />
             <span className="text-zinc-600 hidden sm:inline">•</span>
             <span className="hidden sm:inline">© {new Date().getFullYear()} Todos los derechos reservados.</span>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 sm:gap-6">
             <a href="#menu-del-dia" className="hover:text-amber-400 transition-colors">Menú S/ 10</a>
             <a href="#menu" className="hover:text-white transition-colors">Platos a la Carta</a>
             <a href="#reservas" className="hover:text-white transition-colors">Reservas</a>

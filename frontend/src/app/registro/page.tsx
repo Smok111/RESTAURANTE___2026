@@ -67,7 +67,7 @@ export default function Registro() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-foreground flex overflow-hidden selection:bg-primary/30">
+    <div className="min-h-screen bg-zinc-950 text-foreground flex overflow-x-hidden selection:bg-primary/30">
       <div className="hidden lg:flex w-1/2 relative bg-zinc-950 items-center justify-center">
         <Image
           fill
@@ -121,7 +121,7 @@ export default function Registro() {
             <div className="flex justify-center lg:justify-start mb-4 lg:hidden">
               <Logo size={56} />
             </div>
-            <h2 className="text-3xl font-bold mb-2">Crea tu cuenta</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Crea tu cuenta</h2>
             <p className="text-zinc-400">Es gratis y te toma menos de un minuto</p>
           </div>
 
